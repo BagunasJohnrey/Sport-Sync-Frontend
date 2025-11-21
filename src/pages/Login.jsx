@@ -35,7 +35,7 @@ export default function Login() {
     login(foundUser);
 
 
-    localStorage.setItem("user", JSON.stringify(foundUser));
+    localStorage.setItem("role", foundUser.role);
 
     navigate("/dashboard");
   };

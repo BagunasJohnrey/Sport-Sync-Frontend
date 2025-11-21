@@ -1,36 +1,72 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import POS from "./pages/POS";
+import Inventory from "./pages/Inventory";
+import Reports from "./pages/Reports";
+import Users from "./pages/Users";
+import Settings from "./pages/Settings";
 import Unauthorized from "./pages/Unauthorized";
-
-// ProtectedRoute component for role-based access
-function ProtectedRoute({ children, allowedRoles }) {
-  const role = localStorage.getItem("role"); 
-
-  if (!role) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return children;
-}
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
   return (
     <Router>
       <Routes>
-        {/* Public Routes */}
+        {/* Public Route */}
         <Route path="/login" element={<Login />} />
 
         {/* Protected Routes */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["Admin", "Staff", "Cashier"]}>
+            <ProtectedRoute allowedRoles={["Admin","Staff","Cashier"]}>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/point-of-sale"
+          element={
+            <ProtectedRoute allowedRoles={["Admin","Staff","Cashier"]}>
+              <POS />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute allowedRoles={["Admin","Staff","Cashier"]}>
+              <Inventory />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <Users />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute allowedRoles={["Admin"]}>
+              <Settings />
             </ProtectedRoute>
           }
         />
@@ -38,7 +74,7 @@ export default function App() {
         {/* Unauthorized */}
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* Redirect any unknown routes to login */}
+        {/* Redirect unknown routes to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
