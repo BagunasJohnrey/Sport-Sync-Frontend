@@ -70,7 +70,11 @@ const categoryMap = categories.reduce((acc, c) => {
       "Quantity Sold": quantitySold,
       Revenue: `₱${revenue.toLocaleString()}`,
       Profit: `₱${profit.toLocaleString()}`,
-      "Margin %": `${margin.toFixed(2)}%`
+      "Margin %": (
+        <span className={margin >= 50 ? "text-green-600" : margin < 30 ? "text-red-500" : "text-yellow-500"}>
+          {margin.toFixed(2)}%
+        </span>
+      ),
     };
   });
 
