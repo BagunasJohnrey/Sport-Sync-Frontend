@@ -105,6 +105,34 @@ export const sales = {
   ],
 };
 
+// Auto-Generated Reports
+export const mockReports = [
+  {
+    type: "Daily Report",
+    date: "November 25, 2025",
+  },
+  {
+    type: "Daily Report",
+    date: "November 24, 2025",
+  },
+  {
+    type: "Weekly Report",
+    weekRange: "Nov 17 – Nov 23, 2025",
+  },
+  {
+    type: "Weekly Report",
+    weekRange: "Nov 10 – Nov 16, 2025",
+  },
+  {
+    type: "Monthly Report",
+    month: "November 2025",
+  },
+  {
+    type: "Monthly Report",
+    month: "October 2025",
+  },
+];
+
 // Notifications
 export const notifications = [
   {

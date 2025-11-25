@@ -44,5 +44,9 @@
     .page-title {
         @apply text-3xl font-bold text-charcoalBlack mb-2;
     }
+
+    .default-container {
+        @apply p-6 bg-softWhite border border-gray-300 rounded-2xl shadow-sm;
+    }
 }
 

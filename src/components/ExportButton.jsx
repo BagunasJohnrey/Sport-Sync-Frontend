@@ -15,7 +15,7 @@ export default function ExportButton({ className = "", onSelect = () => {} }) {
         onClick={() => setOpen((s) => !s)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-md hover:shadow-md  transition"
+        className="inline-flex items-center gap-2 px-4 py-2 bg-darkGreen text-softWhite border border-gray-200 shadow-sm rounded-md hover:shadow-md  transition"
       >
         <Download size={16} />
         <span className="text-sm font-medium">Export</span>
