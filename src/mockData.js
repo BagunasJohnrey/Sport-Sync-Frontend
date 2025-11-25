@@ -66,6 +66,23 @@ export const transactions = Array.from({ length: 50 }, (_, i) => {
   };
 });
 
+// Cart Items
+export const mockCartItems = [
+  {
+    id: 1,
+    name: "Nike Soccer Cleats",
+    price: 1200,
+    quantity: 1,
+  },
+  {
+    id: 2,
+    name: "Adidas Running Shirt",
+    price: 600,
+    quantity: 2,
+  },
+];
+
+
 
 // SALES SUMMARY 
 export const sales = {

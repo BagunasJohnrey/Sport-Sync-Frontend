@@ -16,7 +16,7 @@ export default function SearchBar({ onSearch }) {
   };
 
   return (
-    <div className="w-full max-w-md relative">
+    <div className="w-full relative">
       <div className="
         flex items-center w-full
         bg-softWhite border border-gray-300

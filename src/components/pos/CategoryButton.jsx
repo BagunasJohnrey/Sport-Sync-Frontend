@@ -14,7 +14,7 @@ export default function CategoryButton({ categories, active, onSelect }) {
   const allCategories = [{ id: 0, category_name: "All" }, ...categories];
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1">
+    <div className="flex justify-between overflow-x-auto pb-1 w-full">
       {allCategories.map((cat) => {
         const Icon = Icons[iconMap[cat.category_name]] || Icons.Tag;
         const isActive = active === cat.category_name;
