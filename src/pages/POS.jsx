@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
+import Scanner from "../components/Scanner";
 import CategoryButton from "../components/pos/CategoryButton.jsx";
 import Product from '../components/pos/Product.jsx';
 import { products, categories } from "../mockData";
@@ -23,6 +24,7 @@ export default function POS() {
 
           <div className="flex justify-between items-center">
             {/* Insert Search and Scanner component here */}
+            <Scanner/>
           </div>
 
           
