@@ -1,25 +1,29 @@
 import { useAuth } from "../context/AuthContext";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Notification from "./Notification";
 
-export default function Navbar() {
-  const { user, logout } = useAuth();
+export default function Navbar({ setOpenSidebar }) {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
-
-  const handleLogout = () => {
-    logout(); 
-    navigate("/login"); 
-  };
+  
 
   return (
-    <header className="bg-softWhite rounded-lg mt-3 mr-3 shadow flex justify-between items-center p-4">
+    <header className="bg-softWhite lg:rounded-lg shadow flex justify-between items-center p-4">
 
+      {/* Hamburger for mobile */}
+<button
+  onClick={() => setOpenSidebar(true)}
+  className="lg:hidden p-2 rounded hover:bg-gray-100"
+>
+  <Menu size={24} />
+</button> 
       <h2 className="text-lg font-semibold pl-2">Welcome, {user?.full_name}</h2>
 
       <div className="flex items-center gap-4">
+        
         {/* User Info */}
         <button
           onClick={() => navigate("/profile")}
@@ -43,14 +47,12 @@ export default function Navbar() {
           </div>
           )}
 
+          
+
+
         </div>
         
-        <button
-          onClick={handleLogout}
-          className="p-2 rounded hover:bg-crimsonRed/20 text-crimsonRed"
-        >
-          <LogOut size={20} />
-        </button>
+        
       </div>
     </header>
   );

@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 
 export default function Sidebar() {
-  const { user } = useAuth();
+
+  const { user, logout } = useAuth();
 
   const menuItems = [
     { title: "Dashboard", path: "/dashboard", roles: ["Admin","Staff","Cashier"], icon: <Home size={18} stroke="#FAFAFA" /> },
@@ -18,14 +19,19 @@ export default function Sidebar() {
     { title: "Settings", path: "/settings", roles: ["Admin"], icon: <Settings size={18} stroke="#FAFAFA" /> },
   ];
 
+  const handleLogout = () => {
+    logout(); 
+    navigate("/login"); 
+  };
+
   return (
-    <aside className="sticky top-0 left-0  w-64 h-[calc(100vh-2rem)] bg-navyBlue text-softWhite flex flex-col justify-between m-3 p-5 rounded-2xl">
-      <div>
+    <aside className="fixed lg:mt-5 lg:ml-5 top-0 left-0  w-64 h-[calc(100vh-2rem)] bg-navyBlue text-softWhite flex flex-col justify-between p-5 lg:rounded-2xl">
+      <div className='flex flex-col h-full'>
         <div className="mb-10 flex items-center justify-center">
           <img src={logo} alt="Logo" className="w-25 h-auto object-contain" />
         </div>
 
-        <nav className="flex flex-col gap-3 ">
+        <nav className="flex-1 flex-col space-y-3">
           {menuItems
             .filter(item => item.roles.includes(user?.role))
             .map(item => (
@@ -46,6 +52,14 @@ export default function Sidebar() {
 
             ))}
         </nav>
+
+<div>
+  <button className="flex items-center gap-2 w-full text-white font-semibold p-2 rounded-lg hover:bg-darkGreen">
+  <LogOut size={18}/>
+  Log Out
+</button>
+</div>
+        
       </div>
     </aside>
   );
