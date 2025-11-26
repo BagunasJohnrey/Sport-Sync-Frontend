@@ -3,6 +3,8 @@ import { BarChart2, Boxes, LineChart, History } from "lucide-react";
 import SalesReport from "../../components/reports/SalesReport";
 import InventoryReport from "../../components/reports/InventoryReport";
 import Profitability from "../../components/reports/Profitability";
+import TransactionHistory from "../../components/reports/TransactionHistory";
+
 
 
 export default function ManualReportTabs() {
@@ -68,7 +70,7 @@ export default function ManualReportTabs() {
         {reportTab === "sales" && <SalesReport />}
         {reportTab === "inventory" && <InventoryReport />}
         {reportTab === "profit" && <Profitability />}
-        {reportTab === "history" && <div>Transaction History Display Content</div>}
+        {reportTab === "history" && <TransactionHistory />}
       </div>
 
     </div>

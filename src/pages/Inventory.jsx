@@ -52,7 +52,7 @@ export default function Inventory() {
       user.role === "Admin" || user.role === "Staff" ? (
         <div className="flex gap-2">
           <button
-            className="p-2 text-Blue rounded hover:bg-lightGray flex items-center justify-center"
+            className="p-2 text-darkGreen rounded hover:bg-lightGray flex items-center justify-center"
             onClick={() => console.log("Edit", p)}
           >
             <Edit size={16} />

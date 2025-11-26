@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Inter:wght@300;400;600;800&display=swap');
 @import "tailwindcss";
 
+
 @theme {
     /* Whites & Grays */
     --color-offWhite: #F0F4F8;
@@ -48,5 +49,13 @@
     .default-container {
         @apply p-6 bg-softWhite border border-gray-300 rounded-2xl shadow-sm;
     }
+
+    .hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
 }
 

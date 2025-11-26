@@ -8,6 +8,7 @@ import {
   Star
 } from "lucide-react";
 import { products, sales, categories, transactions } from "../../mockData";
+// import CalendarFilter from "../../components/CalendarFilter";
 
 
 
@@ -96,7 +97,7 @@ export default function SalesReport() {
   return (
     <div className="flex flex-col space-y-5">
         <div className="flex justify-end">
-            {/* insert calendar */}
+            {/* insert calendar and export button here */}
         </div>
 
         {/* KPI */}

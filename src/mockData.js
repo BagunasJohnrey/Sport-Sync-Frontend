@@ -43,28 +43,53 @@ const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + mi
 // TRANSACTIONS
 export const transactions = Array.from({ length: 50 }, (_, i) => {
   const user = users[randomInt(0, users.length - 1)];
-  const product = products[randomInt(0, products.length - 1)];
-  const quantity = randomInt(1, 5);
-  const total_amount = product.selling_price * quantity;
-  const paymentMethods = ["Cash", "Card", "Online"];
-  const payment_method = paymentMethods[randomInt(0, 2)];
-  const amount_paid = total_amount + randomInt(0, 20); 
+
+  // Generate 1–4 items per transaction
+  const numberOfItems = randomInt(1, 4);
+
+  const items = Array.from({ length: numberOfItems }, () => {
+    const product = products[randomInt(0, products.length - 1)];
+    const quantity = randomInt(1, 5);
+
+    return {
+      product_id: product.id,
+      quantity: quantity,
+    };
+  });
+
+  const total_amount = items.reduce((sum, item) => {
+    const product = products.find((p) => p.id === item.product_id);
+    return sum + product.selling_price * item.quantity;
+  }, 0);
+
+  const paymentMethods = ["Cash", "GCash"];
+  const payment_method = paymentMethods[randomInt(0, 1)];
+
+  const amount_paid = total_amount + randomInt(0, 50);
   const change_due = amount_paid - total_amount;
-  const remarks = "";
+
+  const fallbackItem = items[0];
+  const fallbackProduct = products.find(p => p.id === fallbackItem.product_id);
 
   return {
     id: i + 1,
     user_id: user.id,
-    product_id: product.id,
-    quantity,
+    items,
+
+
+    product_id: fallbackItem.product_id,
+    quantity: fallbackItem.quantity,
+    product_name: fallbackProduct.product_name,
+
     payment_method,
     total_amount,
     amount_paid,
     change_due,
-    remarks,
+    remarks: "",
     date: new Date(`2025-11-${randomInt(10, 20)}`),
   };
 });
+
 
 // Cart Items
 export const mockCartItems = [
