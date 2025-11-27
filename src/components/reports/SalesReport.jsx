@@ -1,107 +1,155 @@
+import { useState } from "react";
 import KpiCard from "../../components/KpiCard";
 import Chart from "../../components/Chart";
 import Table from "../../components/Table";
-import {
-  DollarSign,
-  ShoppingCart,
-  Activity,
-  Star
-} from "lucide-react";
+import { DollarSign, ShoppingCart, Activity, Star } from "lucide-react";
 import { products, sales, categories, transactions } from "../../mockData";
 // import CalendarFilter from "../../components/CalendarFilter";
 
-
-
-const todayCategoryNames = categories.map(c => c.category_name);
-const todayCategoryVolumeValues = categories.map(c =>
+const todayCategoryNames = categories.map((c) => c.category_name);
+const todayCategoryVolumeValues = categories.map((c) =>
   transactions
-    .filter(t => t.date.toISOString().startsWith("2025-11-20")) // example date
-    .filter(t => categories.find(cat => cat.id === products.find(p => p.id === t.product_id).category_id)?.id === c.id)
+    .filter((t) => t.date.toISOString().startsWith("2025-11-20")) // example date
+    .filter(
+      (t) =>
+        categories.find(
+          (cat) =>
+            cat.id === products.find((p) => p.id === t.product_id).category_id
+        )?.id === c.id
+    )
     .reduce((acc, t) => acc + t.quantity, 0)
 );
 
 // Line Chart - Sales & Revenue Trend
-const lineDates = sales.daily.map(d => d.date);
-const salesTrend = sales.daily.map(d => d.volume);
-const revenueTrend = sales.daily.map(d => d.revenue);
+const lineDates = sales.daily.map((d) => d.date);
+const salesTrend = sales.daily.map((d) => d.volume);
+const revenueTrend = sales.daily.map((d) => d.revenue);
 
 // Bar Chart - Sales by Category
-const barCategoryNames = categories.map(c => c.category_name);
-const barCategorySales = categories.map(c =>
+const barCategoryNames = categories.map((c) => c.category_name);
+const barCategorySales = categories.map((c) =>
   transactions
-    .filter(t => categories.find(cat => cat.id === products.find(p => p.id === t.product_id).category_id)?.id === c.id)
+    .filter(
+      (t) =>
+        categories.find(
+          (cat) =>
+            cat.id === products.find((p) => p.id === t.product_id).category_id
+        )?.id === c.id
+    )
     .reduce((acc, t) => acc + t.quantity, 0)
 );
 
 // Donut Chart - Payment Methods
 const paymentMethods = ["Cash", "Card", "Online"];
-const paymentCounts = paymentMethods.map(method =>
-  transactions.filter(t => t.payment_method === method).length
+const paymentCounts = paymentMethods.map(
+  (method) => transactions.filter((t) => t.payment_method === method).length
 );
 
 // Bar Chart - Category Performance Comparison (Revenue vs Volume)
-const categoryRevenue = categories.map(c =>
+const categoryRevenue = categories.map((c) =>
   transactions
-    .filter(t => categories.find(cat => cat.id === products.find(p => p.id === t.product_id).category_id)?.id === c.id)
+    .filter(
+      (t) =>
+        categories.find(
+          (cat) =>
+            cat.id === products.find((p) => p.id === t.product_id).category_id
+        )?.id === c.id
+    )
     .reduce((acc, t) => acc + t.total_amount, 0)
 );
-const categoryVolume = categories.map(c =>
+const categoryVolume = categories.map((c) =>
   transactions
-    .filter(t => categories.find(cat => cat.id === products.find(p => p.id === t.product_id).category_id)?.id === c.id)
+    .filter(
+      (t) =>
+        categories.find(
+          (cat) =>
+            cat.id === products.find((p) => p.id === t.product_id).category_id
+        )?.id === c.id
+    )
     .reduce((acc, t) => acc + t.quantity, 0)
 );
 
 // Top Selling Products
 
 const categoryMap = categories.reduce((acc, c) => {
-    acc[c.id] = c.category_name;
-    return acc;
-  }, {});
+  acc[c.id] = c.category_name;
+  return acc;
+}, {});
 
-  const productSales = products.map(p => {
-    const productTransactions = transactions.filter(t => t.product_id === p.id);
-    const quantitySold = productTransactions.reduce((sum, t) => sum + t.quantity, 0);
-    const revenue = productTransactions.reduce((sum, t) => sum + t.total_amount, 0);
-    const profit = revenue - quantitySold * p.cost_price;
-    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+const productSales = products.map((p) => {
+  const productTransactions = transactions.filter((t) => t.product_id === p.id);
+  const quantitySold = productTransactions.reduce(
+    (sum, t) => sum + t.quantity,
+    0
+  );
+  const revenue = productTransactions.reduce(
+    (sum, t) => sum + t.total_amount,
+    0
+  );
+  const profit = revenue - quantitySold * p.cost_price;
+  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
-    return {
-      Product: p.product_name,
-      Category: categoryMap[p.category_id],
-      "Quantity Sold": quantitySold,
-      Revenue: `₱${revenue.toLocaleString()}`,
-      Profit: `₱${profit.toLocaleString()}`,
-      "Margin %": (
-        <span className={margin >= 50 ? "text-green-600" : margin < 30 ? "text-red-500" : "text-yellow-500"}>
-          {margin.toFixed(2)}%
-        </span>
-      ),
-    };
-  });
+  return {
+    Product: p.product_name,
+    Category: categoryMap[p.category_id],
+    "Quantity Sold": quantitySold,
+    Revenue: `₱${revenue.toLocaleString()}`,
+    Profit: `₱${profit.toLocaleString()}`,
+    "Margin %": (
+      <span
+        className={
+          margin >= 50
+            ? "text-green-600"
+            : margin < 30
+            ? "text-red-500"
+            : "text-yellow-500"
+        }
+      >
+        {margin.toFixed(2)}%
+      </span>
+    ),
+  };
+});
 
-  // Sort by quantity sold or revenue
-  const topProducts = productSales
-    .sort((a, b) => b["Quantity Sold"] - a["Quantity Sold"])
-    .slice(0, 10);
+// Sort by quantity sold or revenue
+const topProducts = productSales
+  .sort((a, b) => b["Quantity Sold"] - a["Quantity Sold"])
+  .slice(0, 10);
 
-  const columns = [
-    { header: "Product", accessor: "Product" },
-    { header: "Category", accessor: "Category" },
-    { header: "Quantity Sold", accessor: "Quantity Sold" },
-    { header: "Revenue", accessor: "Revenue" },
-    { header: "Profit", accessor: "Profit" },
-    { header: "Margin %", accessor: "Margin %" },
-  ];
+const columns = [
+  { header: "Product", accessor: "Product" },
+  { header: "Category", accessor: "Category" },
+  { header: "Quantity Sold", accessor: "Quantity Sold" },
+  { header: "Revenue", accessor: "Revenue" },
+  { header: "Profit", accessor: "Profit" },
+  { header: "Margin %", accessor: "Margin %" },
+];
 
 export default function SalesReport() {
+  const [trendFilter, setTrendFilter] = useState("both");
+
+  // Valid colors
+const SALES_COLOR = "#002B50";       // or "#000080"
+const REVENUE_COLOR = "#006400";  // dark green hex
+
+const filteredTrendSeries =
+  trendFilter === "sales"
+    ? [{ name: "Sales", data: salesTrend, color: SALES_COLOR }]
+    : trendFilter === "revenue"
+    ? [{ name: "Revenue", data: revenueTrend, color: REVENUE_COLOR }]
+    : [
+        { name: "Sales", data: salesTrend, color: SALES_COLOR },
+        { name: "Revenue", data: revenueTrend, color: REVENUE_COLOR },
+      ];
+
   return (
     <div className="flex flex-col space-y-5">
-        <div className="flex justify-end">
-            {/* insert calendar and export button here */}
-        </div>
+      <div className="flex justify-end">
+        {/* insert calendar and export button here */}
+      </div>
 
-        {/* KPI */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* KPI */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Sales Revenue */}
         <KpiCard
           bgColor="#FAFAFA"
@@ -139,49 +187,90 @@ export default function SalesReport() {
         />
       </div>
 
-        {/* Charts */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <div className="flex flex-col default-container">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-semibold text-gray-600 text-lg">
+              Sales & Revenue Trend
+            </h2>
+
+            <div className="relative group">
+              <select
+                value={trendFilter}
+                onChange={(e) => setTrendFilter(e.target.value)}
+                className="w-full appearance-none border border-gray-200 rounded-xl p-2 pr-10 text-gray-800 font-medium focus:ring-2 focus:ring-navyBlue/30 focus:border-navyBlue transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md group-hover:border-gray-300"
+              >
+                <option value="both" className="p-2">
+                  Sales & Revenue
+                </option>
+                <option value="sales" className="p-2">
+                  Sales
+                </option>
+                <option value="revenue" className="p-2">
+                  Revenue
+                </option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                <svg
+                  className="w-4 h-4 text-gray-500 transition-transform duration-200 group-hover:translate-y-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <Chart
+            type="line"
+            categories={lineDates}
+            series={filteredTrendSeries}
+            height={320}
+          />
+        </div>
+
         <Chart
-        type="line"
-        title="Sales & Revenue Trend"
-        categories={lineDates}
-        series={[
-          { name: "Sales", data: salesTrend, color: "navyBlue" },
-          { name: "Revenue", data: revenueTrend, color: "darkGreen" }
-        ]}
-        height={320}
-      />
+          type="bar"
+          title="Sales by Category"
+          categories={barCategoryNames}
+          series={[{ name: "Sales Volume", data: barCategorySales }]}
+          height={320}
+        />
 
-      <Chart
-        type="bar"
-        title="Sales by Category"
-        categories={barCategoryNames}
-        series={[{ name: "Sales Volume", data: barCategorySales }]}
-        height={320}
-      />
+        <Chart
+          type="donut"
+          title="Payment Methods"
+          categories={["Cash", "GCash"]}
+          series={[35, 25]}
+          height={320}
+        />
 
-      <Chart
-        type="donut"
-        title="Payment Methods"
-        categories={['Cash', 'GCash']}
-        series={[35, 25]}
-        height={320}
-      />
-
-
-      <Chart
-        type="bar"
-        title="Category Performance Comparison"
-        categories={barCategoryNames}
-        series={[
-          { name: "Revenue", data: categoryRevenue },
-          { name: "Volume", data: categoryVolume }
-        ]}
-        height={320}
-      />
+        <Chart
+          type="bar"
+          title="Category Performance Comparison"
+          categories={barCategoryNames}
+          series={[
+            { name: "Revenue", data: categoryRevenue },
+            { name: "Volume", data: categoryVolume },
+          ]}
+          height={320}
+        />
       </div>
 
-      <Table tableName="Top Selling Products" columns={columns} data={topProducts} rowsPerPage={10} />
+      <Table
+        tableName="Top Selling Products"
+        columns={columns}
+        data={topProducts}
+        rowsPerPage={10}
+      />
     </div>
   );
 }

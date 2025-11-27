@@ -1,12 +1,11 @@
 import { Plus } from "lucide-react";
 
-export default function Product({ product }) {
+export default function Product({ product, onAdd, disabled }) {
   return (
     <div
       className="p-4 bg-white rounded-lg border border-gray-300 shadow-sm hover:shadow-md 
       cursor-pointer transition flex flex-col justify-between"
     >
-
       <div className="flex flex-row items-center justify-between mb-4">
         <h3 className="font-medium text-sm">{product.product_name}</h3>
         <p className="font-semibold text-sm mt-1">₱{product.selling_price}</p>
@@ -24,7 +23,15 @@ export default function Product({ product }) {
         >
           {product.quantity} in stock
         </span>
-        <button className="px-3 py-1 bg-navyBlue text-white rounded flex items-center space-x-1 hover:bg-darkGreen transition">
+        <button
+          className={`px-3 py-1 rounded flex items-center space-x-1 transition ${
+            disabled
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-navyBlue text-white hover:bg-darkGreen cursor-pointer"
+          }`}
+          onClick={onAdd}
+          disabled={disabled}
+        >
           <Plus size={14} />
         </button>
       </div>

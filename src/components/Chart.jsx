@@ -31,25 +31,29 @@ export default function Chart({
           }
         } else {
           if (series.length > 0 && typeof series[0] === "number") {
-            validSeries = [
-              {
-                data: series.filter(
-                  (item) => typeof item === "number" && !isNaN(item)
-                ),
-              },
-            ];
-          } else if (series.length > 0 && series[0]?.data) {
-            validSeries = series.map((s) => ({
-              ...s,
-              data: Array.isArray(s.data)
-                ? s.data.filter(
-                    (item) => typeof item === "number" && !isNaN(item)
-                  )
-                : [],
-            }));
-          } else {
-            validSeries = [{ data: [] }];
-          }
+  // case: numeric-only series array
+  validSeries = [
+    {
+      data: series.filter((item) => typeof item === "number" && !isNaN(item)),
+    },
+  ];
+} else if (
+  Array.isArray(series) &&
+  series.length > 0 &&
+  typeof series[0] === "object" &&
+  Array.isArray(series[0].data)
+) {
+  // case: multiple series with objects (line/bar charts)
+  validSeries = series.map((s) => ({
+    ...s,
+    data: Array.isArray(s.data)
+      ? s.data.filter((item) => typeof item === "number" && !isNaN(item))
+      : [],
+  }));
+} else {
+  validSeries = [{ name: "Series", data: [] }];
+}
+
         }
       }
 
@@ -79,7 +83,7 @@ export default function Chart({
   // Default colors
   const defaultColors = {
     bar: ["#004B8D"],
-    line: ["#004B8D"],
+    line: ["#004B8D",  "#1f781a", "#0088FF", "#33A0FF"],
     donut: ["#004B8D", "#1f781a", "#0088FF", "#33A0FF", "#66B8FF", "#99D6FF"],
     area: ["#004B8D"],
     pie: ["#004B8D", "#1f781a", "#0088FF", "#33A0FF", "#66B8FF", "#99D6FF"],
@@ -266,7 +270,8 @@ export default function Chart({
     baseOptions.yaxis = {
       labels: {
         style: { colors: "#64748B" },
-        formatter: (value) => `₱${value?.toLocaleString() || "0"}`,
+        formatter: (value) => value,
+
       },
     };
   } else {
@@ -291,22 +296,19 @@ export default function Chart({
   }
 
   const hasValidData = () => {
-    if (type === "donut" || type === "pie") {
-      return (
-        Array.isArray(validSeries) &&
-        validSeries.length > 0 &&
-        validSeries.some((val) => val > 0)
-      );
-    } else {
-      return (
-        Array.isArray(validSeries) &&
-        validSeries.length > 0 &&
-        validSeries[0]?.data &&
-        validSeries[0].data.length > 0 &&
-        validSeries[0].data.some((val) => val !== undefined && val !== null)
-      );
-    }
-  };
+  if (type === "donut" || type === "pie") {
+    return validSeries.some((val) => val > 0);
+  }
+
+  // For line/bar/area: at least one series must have valid data
+  return validSeries.some(
+    (s) =>
+      Array.isArray(s.data) &&
+      s.data.length > 0 &&
+      s.data.some((v) => v !== undefined && v !== null)
+  );
+};
+
 
   if (!hasValidData()) {
     return (

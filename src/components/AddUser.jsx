@@ -7,8 +7,8 @@ export default function UserManagementHeader() {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    contactNumber: '',
-    address: '',
+    username: '',
+    password: '',
     role: 'Cashier'
   });
 
@@ -22,7 +22,6 @@ export default function UserManagementHeader() {
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Creating user:', { ...formData, active: isActive });
-    // Add your user creation logic here
     setIsModalOpen(false);
   };
 
@@ -35,7 +34,7 @@ export default function UserManagementHeader() {
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-green-800 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 shadow-lg transition-all duration-200"
+          className="flex items-center gap-2 bg-darkGreen text-softWhite px-6 py-3 rounded-lg font-medium hover:bg-green-700 shadow-lg transition-all duration-200"
         >
           <Plus className="w-5 h-5" />
           Add User
@@ -44,10 +43,10 @@ export default function UserManagementHeader() {
 
       {/* Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b-4 border-blue-800 bg-blue-900">
+            <div className="flex items-center justify-between p-6 bg-navyBlue">
               <div>
                 <h2 className="text-2xl font-bold text-white">Add New User</h2>
                 <p className="text-blue-100 text-sm mt-1">
@@ -56,7 +55,7 @@ export default function UserManagementHeader() {
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-blue-800 rounded-lg transition-colors"
+                className="p-2 hover:bg-navyBlue rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-white" />
               </button>
@@ -102,9 +101,9 @@ export default function UserManagementHeader() {
                   Username <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="tel"
-                  name="contactNumber"
-                  value={formData.contactNumber}
+                  type="username"
+                  name="username"
+                  value={formData.username}
                   onChange={handleInputChange}
                   placeholder="Enter Username"
                   required
@@ -169,21 +168,12 @@ export default function UserManagementHeader() {
                 <span className="text-sm font-semibold text-slate-800">Active User</span>
               </div>
 
-              {/* Default Password Info */}
-              <div className="bg-blue-100 border-2 border-blue-900 rounded-lg p-4">
-                <p className="text-sm text-slate-800">
-                  <span className="font-semibold text-blue-900">Default Password:</span>{' '}
-                  <span className="font-mono text-blue-800">password123</span>
-                </p>
-                <p className="text-xs text-slate-700 mt-1">
-                  User will be able to change this after first login.
-                </p>
-              </div>
+              
 
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-blue-800 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 shadow-lg transition-all duration-200"
+                className="w-full bg-darkGreen text-white py-3 rounded-lg font-semibold hover:bg-navyBlue shadow-lg transition-all duration-200"
               >
                 Create User
               </button>
