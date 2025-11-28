@@ -147,3 +147,5 @@ export default function Table({ tableName, columns = [], data = [], rowsPerPage 
     </div>
   );
 }
+
+
