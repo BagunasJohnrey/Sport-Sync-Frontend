@@ -4,10 +4,11 @@ import { users } from "../mockData";
 import { useAuth } from "../context/AuthContext";
 import background from "../assets/background.png";
 import logo from "../assets/logo.png";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, User, Lock } from "lucide-react";
+
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -19,11 +20,11 @@ export default function Login() {
     e.preventDefault();
 
     const foundUser = users.find(
-      (u) => u.email === email && u.password === password
+      (u) => u.username === username && u.password === password
     );
 
     if (!foundUser) {
-      setError("Invalid email or password.");
+      setError("Invalid username or password.");
       return;
     }
 
@@ -67,57 +68,54 @@ export default function Login() {
         </h1>
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-slateGray mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              className="
-            w-full p-3 border border-lightGray rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-deepBlue
-          "
-              placeholder="Enter email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
+          {/* Username */}
+<div className="relative">
+  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slateGray" size={20} />
+
+  <input
+    type="text"
+    required
+    className="
+      w-full pl-10 p-3 border border-lightGray rounded-lg
+      focus:outline-none focus:ring-2 focus:ring-deepBlue
+    "
+    placeholder="Enter username"
+    value={username}
+    onChange={(e) => setUsername(e.target.value)}
+  />
+</div>
+
+
 
           {/* Password */}
-          <div>
-            <label className="block text-sm font-medium text-slateGray mb-1">
-              Password
-            </label>
+<div className="relative">
+  <Lock size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-slateGray" />
 
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                className="
-              w-full p-3 pr-10 border border-lightGray rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-deepBlue
-            "
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+  <input
+    type={showPassword ? "text" : "password"}
+    required
+    className="
+      w-full pl-10 p-3 pr-10 border border-lightGray rounded-lg
+      focus:outline-none focus:ring-2 focus:ring-deepBlue
+    "
+    placeholder="Enter password"
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+  />
 
-              {/* Eye Toggle */}
-              <button
-                type="button"
-                className="
-              absolute right-3 top-1/2 -translate-y-1/2
-              text-slateGray
-            "
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
+  {password.length > 0 && (
+    <button
+      type="button"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-slateGray"
+      onClick={() => setShowPassword(!showPassword)}
+      tabIndex={-1}
+    >
+      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+    </button>
+  )}
+</div>
+
+
 
           {error && (
             <p className="text-crimsonRed text-center mb-2 text-sm">{error}</p>

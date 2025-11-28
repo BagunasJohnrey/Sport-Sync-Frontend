@@ -90,11 +90,19 @@ export default function Sidebar({ onToggle }) {
         {/* User info & logout */}
         <div className={`p-4 border-t border-lightBlue/30 lg:${isCollapsed ? "text-center" : ""}`}>
           {user && (
-            <div className={`mb-4 p-3 bg-lightBlue/20 rounded-lg block lg:${isCollapsed ? "hidden" : "block"}`}>
-              <p className="font-semibold text-sm truncate">{user.full_name}</p>
-              <p className="text-xs text-softWhite/70 capitalize">{user.role}</p>
-            </div>
-          )}
+  <div
+    onClick={() => navigate("/profile")}
+    className={`
+      mb-4 p-3 bg-lightBlue/20 rounded-lg cursor-pointer
+      hover:bg-lightBlue/30 transition
+      block lg:${isCollapsed ? "hidden" : "block"}
+    `}
+  >
+    <p className="font-semibold text-sm truncate">{user.full_name}</p>
+    <p className="text-xs text-softWhite/70 capitalize">{user.role}</p>
+  </div>
+)}
+
           <button onClick={handleLogout} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 font-medium justify-start lg:${isCollapsed ? "justify-center" : "justify-start"} hover:bg-darkGreen hover:text-red-200`}>
             <LogOut size={20} stroke="currentColor" className="shrink-0" />
             <span className={`block lg:${isCollapsed ? "hidden" : "block"}`}>Log Out</span>

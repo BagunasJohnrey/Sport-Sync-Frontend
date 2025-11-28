@@ -9,7 +9,7 @@ import { Edit, PlusCircle, X } from "lucide-react";
 import { Package, AlertTriangle, TrendingDown, DollarSign } from 'lucide-react';
 import { Search, Filter } from 'lucide-react';
 
-// Updated products with prices from the image
+
 const products = [
   {
     product_id: 1,
