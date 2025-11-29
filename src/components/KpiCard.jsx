@@ -1,36 +1,62 @@
 import React from 'react';
+import { Users, UserCheck, Shield, Wallet } from 'lucide-react';
 
-export default function KpiCard({ bgColor, title, icon, value, description }) {
+export default function UserStatsCards() {
+  const stats = [
+    {
+      title: 'Total Users',
+      value: '3',
+      icon: Users,
+      iconColor: 'text-blue-500',
+      iconBg: 'bg-blue-50'
+    },
+    {
+      title: 'Active Users',
+      value: '3',
+      icon: UserCheck,
+      iconColor: 'text-green-500',
+      iconBg: 'bg-green-50'
+    },
+    {
+      title: 'Administrators',
+      value: '1',
+      icon: Shield,
+      iconColor: 'text-blue-400',
+      iconBg: 'bg-blue-50'
+    },
+    {
+      title: 'Cashiers',
+      value: '1',
+      icon: Users,
+      iconColor: 'text-gray-400',
+      iconBg: 'bg-gray-50'
+    }
+  ];
+
   return (
-    <div className="group relative p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-      <div className="flex justify-between items-start">
-        {/* Text Content */}
-        <div className="flex flex-col gap-1">
-          <h3 className="text-slate-700 text-sm font-medium uppercase tracking-wide">
-            {title}
-          </h3>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-3xl font-bold text-slate-800 tracking-tight">
-              {value}
-            </span>
+    <div className="flex gap-4 p-8  flex-wrap">
+      {stats.map((stat, index) => {
+        const Icon = stat.icon;
+        return (
+          <div
+            key={index}
+            className="bg-white rounded-xl shadow-sm p-6 flex-1 min-w-[250px]"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-gray-600 text-sm font-medium">
+                {stat.title}
+              </span>
+              <div className={`${stat.iconBg} p-2 rounded-lg`}>
+                <Icon className={`w-5 h-5 ${stat.iconColor}`} />
+              </div>
+            </div>
+            
+            <div className="text-4xl font-bold text-gray-900">
+              {stat.value}
+            </div>
           </div>
-          {description && (
-            <span className="text-xs font-medium text-slate-500 mt-1 flex items-center gap-1">
-              {description}
-            </span>
-          )}
-        </div>
-
-        {/* Icon Wrapper */}
-        <div
-          className="flex items-center justify-center w-12 h-12 rounded-xl text-white shadow-sm transition-transform group-hover:scale-110"
-          style={{ backgroundColor: bgColor }}
-        >
-          <div className="text-xl">
-            {icon}
-          </div>
-        </div>
-      </div>
+        );
+      })}
     </div>
   );
 }

@@ -1,9 +1,17 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
+<<<<<<< HEAD
+import AddUser from "../components/AddUser";
+import TableFilter from "../components/TableFilter";
+import KpiCard from "../components/KpiCard";
+
+
+=======
 import AddUser from "../components/AddUser"; // Assuming you have this
 import Table from "../components/Table";
 import Filter from "../components/Filter";
 import { Edit2, UserX } from "lucide-react";
+>>>>>>> e2706aeed272b18003f9baa0a3df5dcc149f1c62
 
 export default function Users() {
   // State
@@ -145,6 +153,12 @@ export default function Users() {
 
   return (
     <Layout>
+<<<<<<< HEAD
+        {/* code here */}
+      <AddUser/> 
+      <KpiCard/>
+      <TableFilter/>
+=======
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -180,6 +194,7 @@ export default function Users() {
           rowsPerPage={5}
         />
       </div>
+>>>>>>> e2706aeed272b18003f9baa0a3df5dcc149f1c62
     </Layout>
   );
 }
