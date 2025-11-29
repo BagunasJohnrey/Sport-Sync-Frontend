@@ -13,7 +13,7 @@ export default function Security() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="bg-softWhite p-6 rounded-lg">
             <div className="max-w-6xl mx-auto">
                 <div className="bg-white rounded-lg shadow-sm p-6">
                     <div className="flex items-center gap-2 mb-6">
@@ -25,7 +25,7 @@ export default function Security() {
                         {/* Session Timeout */}
                         <div className="grid grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-900 mb-2">
                                     Session Timeout (minutes)
                                 </label>
                                 <input
@@ -37,7 +37,7 @@ export default function Security() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-gray-900 mb-2">
                                     Max Login Attempts
                                 </label>
                                 <input
@@ -53,7 +53,7 @@ export default function Security() {
                     {/* Save Button */}
                     <button
                         onClick={handleSave}
-                        className="mt-6 w-full bg-black text-white py-3 rounded-md hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 font-medium"
+                        className="mt-6 w-full bg-navyBlue text-white py-3 rounded-md hover:bg-green-800 transition-colors flex items-center justify-center gap-2 font-medium"
                     >
                         <Save className="w-4 h-4" />
                         Save Security Settings
