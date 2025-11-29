@@ -1,13 +1,14 @@
+
 import { X, AlertTriangle } from "lucide-react";
 
 export default function AlertModal({ lowStockItems = [], onClose }) {
   return (
     <div 
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-[999] p-4" 
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-999 p-6" 
       onClick={onClose}
     >
       <div 
-        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" 
+        className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden pb-5" 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with close button */}
@@ -29,7 +30,7 @@ export default function AlertModal({ lowStockItems = [], onClose }) {
           {/* Title */}
           <div className="flex items-center justify-center gap-2 mb-7">
             <AlertTriangle className="text-orange-400" size={18} />
-            <h2 className="text-xl font-semibold text-gray-500">Low Stock Alert</h2>
+            <h2 className="title">Low Stock Alert</h2>
           </div>
           
           {/* Subtitle */}
@@ -46,8 +47,8 @@ export default function AlertModal({ lowStockItems = [], onClose }) {
                 <div className="flex items-start gap-1.5">
                   <span className="text-gray-700 mt-0.5">•</span>
                   <div>
-                    <div className="font-medium text-gray-700">
-                      {item.name} <span className="text-gray-700 text-xs font-normal">(Shoes: {item.sku})</span>
+                    <div className="font-semibold text-gray-700">
+                      {item.name} <span className="text-gray-700 text-xs font-normal">(SKU: {item.sku})</span>
                     </div>
                     <div className="text-xs text-gray-700">
                       Current: {item.current} {item.unit}, Minimum: {item.minimum} {item.unit}
@@ -57,16 +58,6 @@ export default function AlertModal({ lowStockItems = [], onClose }) {
               </li>
             ))}
           </ul>
-        </div>
-
-        {/* Footer with action button */}
-        <div className="px-6 pb-6">
-          <button 
-            onClick={onClose}
-            className="w-full bg-navyBlue hover:bg-green-900 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
-          >
-            OK
-          </button>
         </div>
       </div>
     </div>

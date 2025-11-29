@@ -137,10 +137,22 @@ export default function Inventory() {
   const categoryMap = getCategoryMap(categories);
 
   const [isAlertOpen, setIsAlertOpen] = useState(true);
+  
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const lowStockList = products
+  .filter((p) => p.quantity > 0 && p.quantity <= 10)
+  .map((p) => ({
+    name: p.product_name,
+    sku: p.barcode,
+    current: p.quantity,
+    minimum: 10,
+    unit: "pcs",
+  }));
+
 
   // Only show popup when there are low stock items
   useEffect(() => {
@@ -558,13 +570,12 @@ export default function Inventory() {
       )}
 
       {isAlertOpen && (
-        <AlertModal
-          lowStockItems={products.filter(
-            (p) => p.quantity > 0 && p.quantity <= 10
-          )}
-          onClose={() => setIsAlertOpen(false)}
-        />
-      )}
+  <AlertModal 
+    lowStockItems={lowStockList}
+    onClose={() => setIsAlertOpen(false)}
+  />
+)}
+
 
       <EditProductModal
         isOpen={isEditModalOpen}
