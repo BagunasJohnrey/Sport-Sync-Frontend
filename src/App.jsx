@@ -1,8 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-// import EditProfile from "./pages/EditProfile";
-// import ProfileSettings from "./pages/ProfileSettings";
+import EditProfile from "./components/profile/EditProfile";
+import ProfileSettings from "./components/profile/ProfileSettings";
 import Dashboard from "./pages/Dashboard";
 import POS from "./pages/POS";
 import Inventory from "./pages/Inventory";
@@ -29,7 +29,7 @@ export default function App() {
           }
         />
 
-        {/* <Route
+        <Route
           path="/edit-profile"
           element={
             <ProtectedRoute allowedRoles={["Admin","Staff","Cashier"]}>
@@ -45,7 +45,7 @@ export default function App() {
               <ProfileSettings />
             </ProtectedRoute>
           }
-        /> */}
+        />
 
         <Route
           path="/dashboard"
