@@ -151,7 +151,10 @@ export default function SalesReport() {
   return (
     <div className="flex flex-col space-y-6" ref={reportRef}>
       <div className="flex gap-5 justify-end">
-        <div>
+
+      {/* Calendar */}
+       
+
           <ExportButton
             data={exportData} 
             columns={displayColumns}
@@ -160,7 +163,7 @@ export default function SalesReport() {
             
             domElementRef={reportRef} 
           />
-        </div>
+        
       </div>
 
       {/* 1. KPI Cards */}
