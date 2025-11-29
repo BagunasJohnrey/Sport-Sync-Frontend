@@ -40,7 +40,7 @@ export default function Alerts() {
                 ))}
             </div>
 
-            <button className="mt-6 flex items-center gap-2 px-4 py-2 bg-blue-900 text-gray-100 rounded-lg hover:bg-green-800 transition-colors">
+            <button className="mt-6 flex items-center gap-2 px-4 py-2 bg-navyBlue text-gray-100 rounded-lg hover:bg-green-800 transition-colors">
                 <Bell size={18} />
                 View Alerts
             </button>
