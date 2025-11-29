@@ -12,7 +12,6 @@ export default function Scanner({ onScan }) {
   const videoRef = useRef(null);
   const codeReader = useRef(new BrowserMultiFormatReader());
 
-  // 1. Initial Setup: Fetch Devices
   useEffect(() => {
     if (!isOpen) return;
 
@@ -44,14 +43,13 @@ export default function Scanner({ onScan }) {
     };
   }, [isOpen]);
 
-  // 2. Start Scanning
+
   const startScanning = useCallback(async (deviceId) => {
     if (!deviceId || !videoRef.current) return;
 
     try {
       codeReader.current.reset();
       
-      // Delay to ensure DOM is ready
       setTimeout(async () => {
           if (!videoRef.current) return; 
 
@@ -60,24 +58,20 @@ export default function Scanner({ onScan }) {
             videoRef.current,
             (result, err) => {
               if (result) {
-                // --- SUCCESS BLOCK ---
+
                 const text = result.getText();
                 console.log("Scanned:", text);
                 
-                // 1. Pass data to parent
                 if (onScan) {
                    onScan(text);
                 }
 
-                // 2. Stop the Camera immediately
                 codeReader.current.reset();
 
-                // 3. Close the Modal
                 setIsOpen(false);
               }
               
               if (err && !(err instanceof NotFoundException)) {
-                // Ignore frame errors
               }
             }
           );
@@ -89,7 +83,6 @@ export default function Scanner({ onScan }) {
     }
   }, [onScan]);
 
-  // 3. Trigger Scan
   useEffect(() => {
     if (isOpen && selectedDeviceId) {
         startScanning(selectedDeviceId);
@@ -98,16 +91,6 @@ export default function Scanner({ onScan }) {
 
   return (
     <div>
-      <style>{`
-        @keyframes scanner-line {
-          0% { top: 0; box-shadow: 0 0 4px rgba(239,68,68,0.8); }
-          50% { top: 100%; box-shadow: 0 0 4px rgba(239,68,68,0.8); }
-          100% { top: 0; box-shadow: 0 0 4px rgba(239,68,68,0.8); }
-        }
-        .animate-scanner-line {
-          animation: scanner-line 2.5s linear infinite;
-        }
-      `}</style>
 
       {/* Trigger Button */}
       <button
@@ -119,7 +102,7 @@ export default function Scanner({ onScan }) {
 
       {/* Modal */}
       {isOpen && (
-        <div className="fixed inset-0 bg-charcoalBlack/90 flex items-center justify-center z-[100] px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-charcoalBlack/40 flex items-center justify-center z-100 px-4">
           <div className="bg-white rounded-xl w-full max-w-sm p-4 relative space-y-4 shadow-2xl">
             
             {/* Header */}
@@ -168,16 +151,15 @@ export default function Scanner({ onScan }) {
 
               {/* --- Visual Guides --- */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                {/* 1. The Focus Rectangle (added overflow-hidden) */}
                 <div className="w-64 h-32 border-2 border-green-400 rounded-lg relative shadow-[0_0_0_1000px_rgba(0,0,0,0.5)] overflow-hidden">
-                  {/* Corner markers */}
+
                   <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-green-500 -mt-1 -ml-1"></div>
                   <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-green-500 -mt-1 -mr-1"></div>
                   <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-green-500 -mb-1 -ml-1"></div>
                   <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-green-500 -mb-1 -mr-1"></div>
 
-                  {/* 2. Moving Red Laser Line */}
-                  <div className = "absolute left-0 w-full h-[2px] bg-red-500 animate-scanner-line"></div>
+
+                  <div className = "absolute left-0 w-full h-0.5 bg-red-500 animate-scanner-line"></div>
                 </div>
               </div>
             </div>

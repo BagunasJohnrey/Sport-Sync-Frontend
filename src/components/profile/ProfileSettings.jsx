@@ -1,151 +1,190 @@
 import Layout from "../../components/Layout";
-import { Lock, Eye, EyeOff, Save, ArrowLeft } from "lucide-react";
+import { Lock, Eye, EyeOff, Save, ArrowLeft, Check, ShieldCheck, X as XIcon } from "lucide-react";
 import { useState } from "react";
 
 export default function ProfileSettings() {
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // 1. Toggle Visibility State
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // 2. Form Data State
+  const [formData, setFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // 3. Validation Logic (Real-time)
+  const password = formData.newPassword;
+  const validation = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password), // Checks for any non-alphanumeric char
+    match: password && password === formData.confirmPassword
+  };
+
+  const isFormValid = 
+    Object.values(validation).every(Boolean) && 
+    formData.currentPassword.length > 0;
 
   return (
     <Layout>
-      <div className="min-h-screen p-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
-        <div className="max-w-3xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <button
-              onClick={() => window.history.back()}
-              className="p-2 sm:p-3 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-            >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
+      <div className="max-w-2xl mx-auto pb-12">
+        
+        {/* --- Header --- */}
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => window.history.back()}
+            className="p-2 -ml-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Security Settings</h1>
+            <p className="text-slate-500 text-sm">Manage your password and account security.</p>
+          </div>
+        </div>
+
+        {/* --- Main Card --- */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          
+          {/* Card Title */}
+          <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <Lock className="w-5 h-5" />
+            </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                Profile Settings
-              </h1>
-              <p className="text-gray-500 text-sm sm:text-base mt-1">
-                Manage your account security and preferences
-              </p>
+                <h3 className="font-semibold text-slate-800 text-lg">Change Password</h3>
+                <p className="text-xs text-slate-500">Ensure your account is using a strong password.</p>
             </div>
           </div>
 
-          <div className="flex flex-col space-y-6">
-            {/* Change Password Card */}
-            <div className="bg-softWhite rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
-              <div className="flex items-start gap-2 sm:gap-3 mb-4 sm:mb-6">
-                <div className="p-2 sm:p-3 bg-navyBlue/10 rounded-lg">
-                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-navyBlue" />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                    Change Password
-                  </h3>
-                  <p className="text-gray-500 text-xs sm:text-sm mt-1">
-                    Update your password to keep your account secure
-                  </p>
-                </div>
-              </div>
+          <div className="p-8 space-y-6">
+            
+            {/* Current Password */}
+            <PasswordField
+              label="Current Password"
+              name="currentPassword"
+              value={formData.currentPassword}
+              onChange={handleChange}
+              placeholder="Enter current password"
+              show={showCurrent}
+              setShow={setShowCurrent}
+            />
 
-              <div className="space-y-4 sm:space-y-5">
-                {/* Current Password */}
-                <PasswordField
-                  label="Current Password"
-                  value={""}
-                  show={showCurrentPassword}
-                  setShow={setShowCurrentPassword}
-                  placeholder="Enter current password"
-                />
+            <div className="border-t border-slate-100 my-2"></div>
 
-                {/* New Password */}
+            {/* New Password Section */}
+            <div className="space-y-6">
                 <PasswordField
                   label="New Password"
-                  value={""}
-                  show={showNewPassword}
-                  setShow={setShowNewPassword}
+                  name="newPassword"
+                  value={formData.newPassword}
+                  onChange={handleChange}
                   placeholder="Enter new password"
-                  requirements={[
-                    "8+ characters",
-                    "1 number",
-                    "1 uppercase",
-                    "1 symbol",
-                  ]}
+                  show={showNew}
+                  setShow={setShowNew}
                 />
 
-                {/* Confirm New Password */}
+                {/* Password Strength Indicators (FUNCTIONAL) */}
+                <div className="bg-slate-50 p-5 rounded-xl border border-slate-100 transition-all">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <ShieldCheck size={14} /> Password Requirements
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
+                        <RequirementItem text="At least 8 characters" met={validation.length} />
+                        <RequirementItem text="1 uppercase letter" met={validation.uppercase} />
+                        <RequirementItem text="1 number" met={validation.number} />
+                        <RequirementItem text="1 symbol (!@#$)" met={validation.symbol} />
+                    </div>
+                </div>
+
                 <PasswordField
                   label="Confirm New Password"
-                  value={""}
-                  show={showConfirmPassword}
-                  setShow={setShowConfirmPassword}
-                  placeholder="Confirm new password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Re-enter new password"
+                  show={showConfirm}
+                  setShow={setShowConfirm}
                 />
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
-              <button className="flex items-center justify-center gap-2 px-6 py-3 sm:px-6 sm:py-3 bg-darkGreen text-softWhite rounded-lg hover:bg-navyBlue transition-colors duration-200 font-medium text-sm sm:text-base">
-                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                Update Password
-              </button>
-              <button
-                onClick={() => window.history.back()}
-                className="flex items-center justify-center gap-2 px-6 py-3 sm:px-6 sm:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium text-sm sm:text-base"
-              >
-                Cancel
-              </button>
+                
+                {/* Match Confirmation */}
+                {formData.confirmPassword && (
+                    <div className={`text-xs font-medium flex items-center gap-1.5 ${validation.match ? "text-emerald-600" : "text-rose-500"}`}>
+                        {validation.match ? <Check size={14} /> : <XIcon size={14} />}
+                        {validation.match ? "Passwords match" : "Passwords do not match"}
+                    </div>
+                )}
             </div>
           </div>
+
+          {/* Footer Actions */}
+          <div className="px-8 py-5 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+            <button
+              onClick={() => window.history.back()}
+              className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-all border border-transparent hover:border-slate-200"
+            >
+              Cancel
+            </button>
+            <button 
+                disabled={!isFormValid}
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#002B50] text-white text-sm font-bold rounded-lg hover:bg-[#1f781a] shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4" />
+              Update Password
+            </button>
+          </div>
+
         </div>
       </div>
     </Layout>
   );
 }
 
-// Password Field Component
-function PasswordField({
-  label,
-  value,
-  show,
-  setShow,
-  placeholder,
-  requirements,
-}) {
+// --- Helper Components ---
+
+function RequirementItem({ text, met }) {
+    return (
+        <div className={`flex items-center gap-2 text-xs font-medium transition-colors duration-300 ${met ? 'text-emerald-700' : 'text-slate-400'}`}>
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors duration-300 ${met ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                {met && <Check size={12} strokeWidth={3} />}
+            </div>
+            {text}
+        </div>
+    )
+}
+
+function PasswordField({ label, name, value, onChange, show, setShow, placeholder }) {
   return (
-    <div className="space-y-1">
-      <label className="text-sm sm:text-base font-medium text-gray-700">
+    <div className="space-y-1.5">
+      <label className="block text-sm font-semibold text-slate-700">
         {label}
       </label>
-      <div className="relative">
+      <div className="relative group">
         <input
           type={show ? "text" : "password"}
+          name={name}
           value={value}
-          onChange={() => {}}
+          onChange={onChange}
           placeholder={placeholder}
-          className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navyBlue/20 focus:border-navyBlue transition-colors duration-200 pr-12 text-sm sm:text-base"
+          className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-sm outline-none transition-all focus:border-[#002B50] focus:ring-4 focus:ring-[#002B50]/10 placeholder:text-slate-400 text-slate-800"
         />
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+          className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-[#002B50] transition-colors focus:outline-none"
         >
-          {show ? (
-            <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
-          ) : (
-            <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-          )}
+          {show ? <EyeOff size={18} /> : <Eye size={18} />}
         </button>
       </div>
-      {requirements && (
-        <div className="grid grid-cols-2 gap-2 mt-1 sm:mt-2 text-xs sm:text-sm text-gray-500">
-          {requirements.map((req, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-darkGreen rounded-full"></div>
-              <span>{req}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

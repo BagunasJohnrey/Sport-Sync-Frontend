@@ -34,15 +34,15 @@ export default function TransactionModal({ open, onClose, data }) {
 
   return (
     <div
-      className="fixed inset-0 bg-charcoalBlack/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-charcoalBlack/40 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scaleIn relative border border-gray-100 flex flex-col max-h-[90vh]"
+        className="bg-softWhite rounded-2xl shadow-2xl w-full max-w-md animate-scaleIn relative flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="bg-navyBlue rounded-t-2xl p-6 text-white flex-shrink-0">
+        <div className="bg-navyBlue rounded-t-2xl p-6 text-softWhite shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Receipt className="w-6 h-6" />
@@ -95,7 +95,7 @@ export default function TransactionModal({ open, onClose, data }) {
               {data.items.map((item, idx) => {
                 const product = products.find((p) => p.id === item.product_id);
                 return (
-                  <div className="bg-white p-3 border border-gray-300 rounded-lg">
+                  <div key={idx} className="bg-white p-3 border border-gray-300 rounded-lg">
               <div className="flex justify-between items-start">
                 {/* Left Side */}
                 <div className="flex-1">

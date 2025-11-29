@@ -4,7 +4,7 @@ import { X, AlertTriangle } from "lucide-react";
 export default function AlertModal({ lowStockItems = [], onClose }) {
   return (
     <div 
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-999 p-6" 
+      className="fixed inset-0 bg-black/40 flex items-center justify-center z-999 p-15 md:p-10" 
       onClick={onClose}
     >
       <div 

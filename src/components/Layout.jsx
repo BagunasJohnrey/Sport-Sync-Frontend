@@ -51,7 +51,7 @@ export default function Layout({ children }) {
   ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}
 `}>
   <Navbar setOpenSidebar={setOpenSidebar} />
-  <main className="flex-1 p-6 overflow-auto">
+  <main className="flex-1 p-6 overflow-auto pt-25 md:pt-10 lg:pt-5 xl:pt-6">
     {children}
   </main>
 </div>

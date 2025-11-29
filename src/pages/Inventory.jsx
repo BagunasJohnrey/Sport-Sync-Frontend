@@ -325,7 +325,7 @@ export default function Inventory() {
           </div>
 
           {/* Scanner & Add Button */}
-          <div className="flex flex-col sm:flex-row justify-en items-start sm:items-center gap-4 shrink-0 mt-15 lg:mt-0">
+          <div className="flex flex-row justify-end items-center gap-4 shrink-0 mt-15 lg:mt-0">
           
               <Scanner />
 
@@ -333,7 +333,7 @@ export default function Inventory() {
               {(user.role === "Admin" || user.role === "Staff") && (
                 <button
                   onClick={() => setIsModalOpen(true)}
-                  className="text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  className="text-softWhite px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
                   style={{ backgroundColor: "#004B8D" }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.backgroundColor = "#003366")
@@ -350,7 +350,7 @@ export default function Inventory() {
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Products */}
           <KpiCard

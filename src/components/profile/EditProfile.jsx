@@ -4,124 +4,132 @@ import { Save, User, Mail, Shield, ArrowLeft } from "lucide-react";
 export default function EditProfile() {
   return (
     <Layout>
-      <div className="min-h-screen p-4 sm:px-6 md:px-8 lg:px-10 xl:px-12">
-        <div className="max-w-4xl">
-          {/* Header */}
-          <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 justify-start">
+      <div className="max-w-3xl mx-auto pb-12">
+        
+        {/* --- Header --- */}
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={() => window.history.back()}
+            className="p-2 -ml-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Edit Profile</h1>
+            <p className="text-slate-500 text-sm">Update your personal details and contact info.</p>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          
+          {/* --- Personal Information --- */}
+          <InfoCard
+            icon={<User className="w-5 h-5 text-[#002B50]" />}
+            title="Personal Information"
+            fields={[
+              {
+                label: "Full Name",
+                type: "text",
+                value: "John Doe",
+                placeholder: "e.g. John Doe",
+              },
+              {
+                label: "Username",
+                type: "text",
+                value: "johndoe",
+                disabled: true,
+                icon: <Shield className="w-4 h-4 text-slate-400" />,
+                note: "Username cannot be changed.",
+              },
+            ]}
+          />
+
+          {/* --- Contact Information --- */}
+          <InfoCard
+            icon={<Mail className="w-5 h-5 text-[#002B50]" />}
+            title="Contact Information"
+            fields={[
+              {
+                label: "Email Address",
+                type: "email",
+                value: "john.doe@example.com",
+                placeholder: "e.g. john@company.com",
+                icon: <Mail className="w-4 h-4 text-slate-400" />,
+              },
+            ]}
+          />
+
+          {/* --- Action Buttons --- */}
+          <div className="flex items-center justify-end gap-4 pt-4 border-t border-slate-100">
             <button
               onClick={() => window.history.back()}
-              className="p-2 sm:p-3 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+              className="px-6 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+              Cancel
             </button>
-            <div className="flex flex-col">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                Edit Profile
-              </h1>
-              <p className="text-gray-500 text-sm sm:text-base mt-1">
-                Update your personal information
-              </p>
-            </div>
+            <button className="flex items-center gap-2 px-6 py-2.5 bg-[#002B50] text-white text-sm font-semibold rounded-lg hover:bg-[#1f781a] shadow-sm hover:shadow-md transition-all active:scale-[0.98]">
+              <Save className="w-4 h-4" />
+              Save Changes
+            </button>
           </div>
 
-          <div className="flex flex-col space-y-6">
-            {/* Personal Information Card */}
-            <InfoCard
-              icon={<User className="w-4 h-4 sm:w-5 sm:h-5 text-navyBlue" />}
-              title="Personal Information"
-              fields={[
-                {
-                  label: "Full Name",
-                  type: "text",
-                  value: "John Doe",
-                  placeholder: "Enter your full name",
-                },
-                {
-                  label: "Username",
-                  type: "text",
-                  value: "johndoe",
-                  disabled: true,
-                  icon: (
-                    <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                  ),
-                  note: "Username cannot be changed",
-                },
-              ]}
-            />
-
-            {/* Contact Information Card */}
-            <InfoCard
-              icon={<Mail className="w-4 h-4 sm:w-5 sm:h-5 text-navyBlue" />}
-              title="Contact Information"
-              fields={[
-                {
-                  label: "Email Address",
-                  type: "email",
-                  value: "john.doe@example.com",
-                  placeholder: "Enter your email address",
-                  icon: (
-                    <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                  ),
-                },
-              ]}
-            />
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-start sm:justify-between gap-3 pt-4">
-              <button className="flex items-center justify-center gap-2 px-6 py-3 bg-darkGreen text-white rounded-lg hover:bg-navyBlue transition-colors duration-200 font-medium text-sm sm:text-base">
-                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                Save Changes
-              </button>
-              <button
-                onClick={() => window.history.back()}
-                className="flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium text-sm sm:text-base"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </Layout>
   );
 }
 
-// InfoCard Component for Reusability
+// --- Reusable Card Component ---
 function InfoCard({ icon, title, fields }) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
-      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-        <div className="p-2 sm:p-3 bg-navyBlue/10 rounded-lg">{icon}</div>
-        <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-          {title}
-        </h3>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      
+      {/* Card Header */}
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+        <div className="p-2 bg-white border border-slate-200 rounded-lg shadow-sm">
+          {icon}
+        </div>
+        <h3 className="text-base font-semibold text-slate-800">{title}</h3>
       </div>
-      <div className="space-y-4 sm:space-y-5">
+
+      {/* Card Body */}
+      <div className="p-6 space-y-6">
         {fields.map((field, i) => (
-          <div key={i} className="space-y-1">
-            <label className="text-sm sm:text-base font-medium text-gray-700">
+          <div key={i}>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
               {field.label}
             </label>
+            
             <div className="relative">
               <input
                 type={field.type}
-                value={field.value}
+                defaultValue={field.value} // Use defaultValue for uncontrolled inputs or value/onChange for controlled
                 placeholder={field.placeholder}
                 disabled={field.disabled}
-                className={`w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg ${
-                  field.disabled
-                    ? "bg-gray-50 text-gray-500"
-                    : "focus:ring-2 focus:ring-navyBlue/20 focus:border-navyBlue"
-                } transition-colors duration-200 text-sm sm:text-base`}
+                className={`
+                  w-full px-4 py-2.5 text-sm rounded-lg border outline-none transition-all
+                  ${field.disabled 
+                    ? "bg-slate-50 text-slate-500 border-slate-200 cursor-not-allowed" 
+                    : "bg-white border-slate-300 text-slate-900 focus:border-[#002B50] focus:ring-4 focus:ring-[#002B50]/10"
+                  }
+                  ${field.icon ? "pr-10" : ""}
+                `}
               />
+              
+              {/* Field Icon */}
               {field.icon && (
-                <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3">
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   {field.icon}
                 </div>
               )}
             </div>
+
+            {/* Helper Note */}
             {field.note && (
-              <p className="text-xs sm:text-sm text-gray-500">{field.note}</p>
+              <p className="mt-1.5 text-xs text-slate-500 flex items-center gap-1">
+                {field.disabled && <Shield className="w-3 h-3" />}
+                {field.note}
+              </p>
             )}
           </div>
         ))}

@@ -1,22 +1,21 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import { Settings, User, Mail, Shield, CheckCircle, Edit2 } from "lucide-react";
+import { Settings, User, Mail, Shield, CheckCircle2, Edit2, LogOut } from "lucide-react";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user } = useAuth(); 
   const navigate = useNavigate();
 
   if (!user) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center p-8">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8 text-gray-400" />
-            </div>
-            <p className="text-gray-500 text-lg">No user data available</p>
+        <div className="min-h-[80vh] flex flex-col items-center justify-center p-8">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+            <User className="w-10 h-10 text-slate-400" />
           </div>
+          <h2 className="text-xl font-bold text-slate-800">User Not Found</h2>
+          <p className="text-slate-500 mt-2">Please log in to view your profile.</p>
         </div>
       </Layout>
     );
@@ -24,128 +23,131 @@ export default function Profile() {
 
   return (
     <Layout>
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Responsive Grid */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {/* LEFT SECTION */}
-            <div className="md:col-span-2 xl:col-span-2">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 h-full">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-                    Profile
-                  </h1>
 
-                  <div className="flex gap-2 sm:gap-3">
-                    <button
-                      onClick={() => navigate("/edit-profile")}
-                      className="p-2 sm:p-3 text-gray-400 hover:text-navyBlue hover:bg-gray-50 rounded-lg transition"
-                    >
-                      <Edit2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-                    <button
-                      onClick={() => navigate("/profile-settings")}
-                      className="p-2 sm:p-3 text-gray-400 hover:text-navyBlue hover:bg-gray-50 rounded-lg transition"
-                    >
-                      <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
-                    </button>
-                  </div>
+        
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="page-title">My Profile</h1>
+            <p className="page-description mb-5">Manage your account settings and preferences.</p>
+          </div>
+          <div className="flex gap-3 mb-4 justify-end">
+            <button
+              onClick={() => navigate("/edit-profile")}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-sm font-medium shadow-sm"
+            >
+              <Edit2 size={16} />
+              <span>Edit Profile</span>
+            </button>
+            <button
+              onClick={() => navigate("/profile-settings")}
+              className="p-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <Settings size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* LEFT COLUMN - Identity Card */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col items-center text-center sticky top-6">
+              
+              {/* Avatar */}
+              <div className="relative mb-6">
+                <div className="w-28 h-28 rounded-full bg-linear-to-br from-navyBlue to-[#1f781a] flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-white">
+                  {user.full_name.charAt(0).toUpperCase()}
                 </div>
-
-                {/* Avatar */}
-                <div className="flex flex-col items-center text-center mb-8">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-navyBlue to-darkGreen rounded-full flex items-center justify-center mb-6">
-                    <span className="text-xl sm:text-2xl text-white font-semibold">
-                      {user.full_name.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 sm:space-y-2">
-                    <h2 className="text-xl sm:text-2xl font-semibold">
-                      {user.full_name}
-                    </h2>
-                    <p className="text-gray-500 text-base sm:text-lg">
-                      @{user.username}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Status Badge */}
-                <div className="flex justify-center">
-                  <div className="inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-6 py-2 sm:py-3 rounded-full bg-green-50 border border-green-200">
-                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-darkGreen" />
-                    <span className="text-sm sm:text-base font-medium text-darkGreen capitalize">
-                      {user.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT SECTION */}
-            <div className="md:col-span-2 xl:col-span-2 space-y-6">
-              {/* Personal */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                <h3 className="flex items-center gap-3 text-lg sm:text-xl font-semibold text-gray-900 mb-6 sm:mb-8">
-                  <div className="p-3 bg-navyBlue/30 rounded-xl">
-                    <User className="w-5 h-5 sm:w-6 sm:h-6 text-navyBlue" />
-                  </div>
-                  Personal Information
-                </h3>
-
-                <div className="space-y-5">
-                  <InfoItem label="Full Name" value={user.full_name} />
-                  <InfoItem label="Username" value={user.username} />
+                <div className="absolute bottom-1 right-1 bg-white p-1 rounded-full shadow-sm">
+                    {/* Online Status Indicator */}
+                    <div className="w-4 h-4 bg-emerald-500 rounded-full border-2 border-white"></div>
                 </div>
               </div>
 
-              {/* Account */}
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                <h3 className="flex items-center gap-3 text-lg sm:text-xl font-semibold text-gray-900 mb-6 sm:mb-8">
-                  <div className="p-3 bg-darkGreen/30 rounded-xl">
-                    <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-darkGreen" />
-                  </div>
-                  Account Information
-                </h3>
+              <h2 className="text-xl font-bold text-slate-800 mb-1">{user.full_name}</h2>
+              <p className="text-slate-500 text-sm font-medium mb-6">@{user.username}</p>
 
-                <div className="space-y-5">
-                  <InfoItem
-                    label="Email"
-                    value={user.email}
-                    icon={<Mail className="w-5 h-5 text-gray-400" />}
-                  />
-                  <InfoItem label="Role" value={user.role} capitalize />
+              {/* Status Pill */}
+              <div className={`
+                inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold mb-8
+                ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-600'}
+              `}>
+                <CheckCircle2 size={14} className={user.status === 'Active' ? 'text-emerald-600' : 'text-slate-500'} />
+                <span className="capitalize">{user.status}</span>
+              </div>
+
+              {/* Quick Stats or Info (Optional) */}
+              <div className="w-full grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
+                <div className="text-center">
+                    <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Role</span>
+                    <span className="text-slate-800 font-semibold capitalize">{user.role}</span>
+                </div>
+                <div className="text-center border-l border-slate-100">
+                    <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Joined</span>
+                    <span className="text-slate-800 font-semibold">2024</span>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* RIGHT COLUMN - Details */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Personal Information */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                    <User size={18} />
+                </div>
+                <h3 className="font-semibold text-slate-800">Personal Information</h3>
+              </div>
+              <div className="p-6 space-y-1">
+                <InfoRow label="Full Name" value={user.full_name} />
+                <div className="border-b border-slate-50 my-2"></div>
+                <InfoRow label="Username" value={user.username} />
+                <div className="border-b border-slate-50 my-2"></div>
+                
+              </div>
+            </div>
+
+            {/* Account Details */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <Shield size={18} />
+                </div>
+                <h3 className="font-semibold text-slate-800">Account Details</h3>
+              </div>
+              <div className="p-6 space-y-1">
+                <InfoRow 
+                    label="Email Address" 
+                    value={user.email} 
+                    icon={<Mail size={14} className="text-slate-400 mr-2 inline" />} 
+                />
+                <div className="border-b border-slate-50 my-2"></div>
+                <InfoRow label="Role Access" value={user.role} capitalize />
+                <div className="border-b border-slate-50 my-2"></div>
+                <InfoRow label="Account Status" value={user.status} capitalize color="text-emerald-600" />
+              </div>
+            </div>
+
+          </div>
         </div>
-      </div>
+
     </Layout>
   );
 }
 
-function InfoItem({ label, value, icon, capitalize = false }) {
+// Reusable Row Component
+function InfoRow({ label, value, icon, capitalize, isPlaceholder, color = "text-slate-800" }) {
   return (
-    <div
-      className="flex flex-col sm:flex-row sm:items-center justify-between 
-      gap-1 sm:gap-4 py-4 px-2 border-b border-gray-100 last:border-b-0"
-    >
-      <div className="flex items-center gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 py-3">
+      <dt className="text-sm font-medium text-slate-500">{label}</dt>
+      <dd className={`text-sm sm:col-span-2 font-medium ${capitalize ? 'capitalize' : ''} ${isPlaceholder ? 'text-slate-400 italic' : color}`}>
         {icon}
-        <span className="text-sm sm:text-base font-medium text-gray-600">
-          {label}
-        </span>
-      </div>
-
-      <span
-        className={`text-sm sm:text-base font-semibold text-gray-900 ${
-          capitalize ? "capitalize" : ""
-        }`}
-      >
         {value}
-      </span>
+      </dd>
     </div>
   );
 }

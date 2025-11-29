@@ -17,7 +17,7 @@ export default function Tabs({ tabs, initialTab }) {
   return (
     <div>
       {/* Tabs Header */}
-      <div className="relative flex justify-evenly bg-softWhite border border-gray-300 shadow-md rounded-xl gap-3 px-5 py-1 mb-6 border-b overflow-x-auto">
+      <div className="relative flex justify-evenly bg-softWhite border border-gray-300 shadow-md rounded-xl gap-3 px-5 py-1 mb-6 border-b overflow-x-auto hide-scrollbar">
         {tabs.map((tab, index) => (
           <button
             key={tab.id}
@@ -26,7 +26,7 @@ export default function Tabs({ tabs, initialTab }) {
             className="relative flex items-center gap-2 px-4 py-2 rounded-t-lg transition text-gray-600 hover:text-darkGreen"
           >
             {tab.icon && <tab.icon size={18} />}
-            <span>{tab.label}</span>
+            <span className="text-sm lg:text-md xl:text-lg">{tab.label}</span>
           </button>
         ))}
 

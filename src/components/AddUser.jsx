@@ -30,7 +30,7 @@ export default function UserManagementHeader() {
       <div className="flex items-center justify-between ">
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-darkGreen text-softWhite px-6 py-3 rounded-lg font-medium hover:bg-green-700 shadow-lg transition-all duration-200"
+          className="bg-darkGreen text-softWhite px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-800 transition-colors"
         >
           <Plus className="w-5 h-5" />
           Add User

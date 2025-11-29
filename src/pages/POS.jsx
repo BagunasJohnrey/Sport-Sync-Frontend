@@ -64,10 +64,8 @@ export default function POS() {
     });
   };
 
-  // --- NEW: SCANNER HANDLER ---
+  // --- SCANNER HANDLER ---
   const handleScanResult = (barcodeText) => {
-    // 1. Find product in mockData using the scanned barcode
-    // Ensure your mockData products have a 'barcode' field to match against
     const foundProduct = products.find(p => p.barcode === barcodeText);
 
     if (foundProduct) {
@@ -121,14 +119,14 @@ export default function POS() {
         <div className="flex-1 flex flex-col gap-4 h-full overflow-hidden">
           
           {/* Header & Search */}
-          <div className="shrink-0 mt-16 lg:mt-0 w-full mb-4 relative z-[60]"> 
+          <div className="shrink-0 mt-5 lg:mt-0 w-full mb-4 relative z-60"> 
             <div className="flex items-center gap-3 w-full">
               {/* Search Component */}
               <div className="flex-1">
                 <Search />
               </div>
 
-              {/* Scanner Component - Pass the handler here */}
+              {/* Scanner Component */}
               <div className="shrink-0">
                 <Scanner onScan={handleScanResult} />
               </div>
