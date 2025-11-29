@@ -1,19 +1,23 @@
 import { useState } from "react";
 import Layout from "../components/Layout";
-<<<<<<< HEAD
-import AddUser from "../components/AddUser";
-import TableFilter from "../components/TableFilter";
 import KpiCard from "../components/KpiCard";
-
-
-=======
-import AddUser from "../components/AddUser"; // Assuming you have this
+import AddUser from "../components/AddUser"; 
 import Table from "../components/Table";
 import Filter from "../components/Filter";
-import { Edit2, UserX } from "lucide-react";
->>>>>>> e2706aeed272b18003f9baa0a3df5dcc149f1c62
+import { Edit2, UserX, Shield, Wallet, User, TrendingUp, UserCheck } from "lucide-react";
+
 
 export default function Users() {
+  const totalUsers = 3;
+  const activeUsers = 3;
+  const administrators = 1;
+  const cashiers = 1;
+  
+
+  const userGrowth = 15; 
+  const activeRate = ((activeUsers / totalUsers) * 100).toFixed(0); 
+
+
   // State
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -53,6 +57,41 @@ export default function Users() {
       lastLogin: "11/26/2025",
       initial: "B",
     },
+  ];
+
+  const roles = [
+    {
+      title: 'Administrator',
+      icon: Shield,
+      iconColor: 'text-blue-400',
+      permissions: [
+        'Full system access',
+        'User management',
+        'System settings',
+        'All reports'
+      ]
+    },
+    {
+      title: 'Cashier',
+      icon: Wallet,
+      iconColor: 'text-gray-600',
+      permissions: [
+        'POS operations',
+        'View inventory',
+        'Basic dashboard'
+      ]
+    },
+    {
+      title: 'Staff',
+      icon: User,
+      iconColor: 'text-gray-600',
+      permissions: [
+        'Inventory management',
+        'Stock adjustments',
+        'Product management',
+        'Basic dashboard'
+      ]
+    }
   ];
 
   // Filtering Logic
@@ -153,12 +192,6 @@ export default function Users() {
 
   return (
     <Layout>
-<<<<<<< HEAD
-        {/* code here */}
-      <AddUser/> 
-      <KpiCard/>
-      <TableFilter/>
-=======
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -170,6 +203,67 @@ export default function Users() {
 
           <AddUser />
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <KpiCard
+          bgColor="#3B82F6"
+          title="Total Users"
+          icon={<User />}
+          value={totalUsers}
+          description={
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                <TrendingUp size={12} /> 
+                {userGrowth}%
+              </span>
+              <span className="opacity-70">vs last month</span>
+            </div>
+          }
+        />
+
+        <KpiCard
+          bgColor="#10B981"
+          title="Active Users"
+          icon={<UserCheck />}
+          value={activeUsers}
+          description={
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                {activeRate}%
+              </span>
+              <span className="opacity-70">activity rate</span>
+            </div>
+          }
+        />
+
+        <KpiCard
+          bgColor="#6366F1"
+          title="Administrators"
+          icon={<Shield />}
+          value={administrators}
+          description={
+            <div className="flex items-center gap-2">
+              <span className="text-xs opacity-70">
+                Full system access
+              </span>
+            </div>
+          }
+        />
+
+        <KpiCard
+          bgColor="#64748B"
+          title="Cashiers"
+          icon={<Wallet />}
+          value={cashiers}
+          description={
+            <div className="flex items-center gap-2">
+              <span className="text-xs opacity-70">
+                POS operations
+              </span>
+            </div>
+          }
+        />
+      </div>
 
         <Filter
           searchQuery={searchTerm}
@@ -193,8 +287,42 @@ export default function Users() {
           data={filteredUsers}
           rowsPerPage={5}
         />
+
+        
+          {/* Description */}
+      <div className="bg-white rounded-xl shadow-sm p-8">
+        <h2 className="text-2xl font-semibold text-gray-900 mb-8">Role Permissions</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {roles.map((role, index) => {
+            const Icon = role.icon;
+            return (
+              <div key={index} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-5 h-5 ${role.iconColor}`} />
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {role.title}
+                  </h3>
+                </div>
+                
+                <ul className="space-y-2">
+                  {role.permissions.map((permission, pIndex) => (
+                    <li key={pIndex} className="text-gray-600 text-sm flex items-start">
+                      <span className="mr-2">•</span>
+                      <span>{permission}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       </div>
->>>>>>> e2706aeed272b18003f9baa0a3df5dcc149f1c62
+
+        
+      </div>
     </Layout>
   );
 }
+
+
