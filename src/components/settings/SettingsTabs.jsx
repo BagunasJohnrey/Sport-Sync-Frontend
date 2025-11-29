@@ -9,7 +9,7 @@ export default function ManualReportTabs() {
   const tabsData = [
     { id: "security", label: "Security", icon: Shield, content: <Security /> },
     { id: "alerts", label: "Alerts", icon: Bell, content: <Alerts /> },
-    { id: "backup", label: "Profitability", icon: Database, content: <Backup /> },
+    { id: "backup", label: "Backup", icon: Database, content: <Backup /> },
     
   ];
 

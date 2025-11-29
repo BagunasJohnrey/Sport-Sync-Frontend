@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Layout from "../components/Layout";
 import Table from "../components/Table";
 import KpiCard from "../components/KpiCard";
 import Filter from "../components/Filter";
 import Scanner from "../components/Scanner.jsx";
 import EditProductModal from "../components/inventory/EditProductModal.jsx";
+import AlertModal from "../components/inventory/AlertModal.jsx";
 import { categories } from "../mockData";
 import { useAuth } from "../context/AuthContext";
 import { getCategoryMap } from "../utils/Utils.js";
@@ -135,9 +136,20 @@ export default function Inventory() {
   const { user } = useAuth();
   const categoryMap = getCategoryMap(categories);
 
+  const [isAlertOpen, setIsAlertOpen] = useState(true);
+
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Only show popup when there are low stock items
+  useEffect(() => {
+  if (lowStockItems > 0) {
+    setIsAlertOpen(true);
+  }
+}, []);
+
 
   // Form state
   const [formData, setFormData] = useState({
@@ -492,6 +504,14 @@ export default function Inventory() {
           </div>
         </div>
       )}
+
+      {isAlertOpen && (
+  <AlertModal
+    lowStockItems={products.filter(p => p.quantity > 0 && p.quantity <= 10)}
+    onClose={() => setIsAlertOpen(false)}
+  />
+)}
+
 
       <EditProductModal
         isOpen={isEditModalOpen}
