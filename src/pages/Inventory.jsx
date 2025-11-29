@@ -138,22 +138,28 @@ export default function Inventory() {
 
   const [isAlertOpen, setIsAlertOpen] = useState(true);
 
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   // Only show popup when there are low stock items
   useEffect(() => {
-  if (lowStockItems > 0) {
-    setIsAlertOpen(true);
-  }
-}, []);
-
+    if (lowStockItems > 0) {
+      setIsAlertOpen(true);
+    }
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState({
-    productName: "", category: "", description: "", sellingPrice: "0.00", costPrice: "0.00", initialStock: "0", reorderPoint: "10", supplier: "", barcode: "",
+    productName: "",
+    category: "",
+    description: "",
+    sellingPrice: "0.00",
+    costPrice: "0.00",
+    initialStock: "0",
+    reorderPoint: "10",
+    supplier: "",
+    barcode: "",
   });
 
   // Filter states
@@ -163,19 +169,31 @@ export default function Inventory() {
 
   // Logic
   const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.product_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.category_id === parseInt(selectedCategory);
+    const matchesSearch = product.product_name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" ||
+      product.category_id === parseInt(selectedCategory);
     let matchesStockLevel = true;
-    if (selectedStockLevel === "in-stock") matchesStockLevel = product.quantity > 0;
-    else if (selectedStockLevel === "low-stock") matchesStockLevel = product.quantity > 0 && product.quantity <= 10;
-    else if (selectedStockLevel === "out-of-stock") matchesStockLevel = product.quantity === 0;
+    if (selectedStockLevel === "in-stock")
+      matchesStockLevel = product.quantity > 0;
+    else if (selectedStockLevel === "low-stock")
+      matchesStockLevel = product.quantity > 0 && product.quantity <= 10;
+    else if (selectedStockLevel === "out-of-stock")
+      matchesStockLevel = product.quantity === 0;
     return matchesSearch && matchesCategory && matchesStockLevel;
   });
 
   const totalProducts = products.length;
-  const lowStockItems = products.filter((p) => p.quantity > 0 && p.quantity <= 10).length;
+  const lowStockItems = products.filter(
+    (p) => p.quantity > 0 && p.quantity <= 10
+  ).length;
   const outOfStockItems = products.filter((p) => p.quantity === 0).length;
-  const inventoryValue = products.reduce((sum, p) => sum + parseFloat(p.cost_price) * p.quantity, 0);
+  const inventoryValue = products.reduce(
+    (sum, p) => sum + parseFloat(p.cost_price) * p.quantity,
+    0
+  );
 
   // Table Config
   const columns = [
@@ -193,8 +211,10 @@ export default function Inventory() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveProduct = (updatedProduct) => { console.log("Saving:", updatedProduct); };
-  
+  const handleSaveProduct = (updatedProduct) => {
+    console.log("Saving:", updatedProduct);
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -209,44 +229,75 @@ export default function Inventory() {
   const data = filteredProducts.map((p) => ({
     Product: p.product_name,
     Category: categoryMap[p.category_id],
-    "Cost Price": `₱${parseFloat(p.cost_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
-    "Selling Price": `₱${parseFloat(p.selling_price).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`,
-    Stock: <span className={p.quantity === 0 ? "text-red-500 font-bold" : "text-emerald-600 font-bold"}>{p.quantity}</span>,
-    Status: p.quantity === 0 
-      ? <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold uppercase">Out of Stock</span> 
-      : <span className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-xs font-bold uppercase">In Stock</span>,
-    Actions: (user.role === "Admin" || user.role === "Staff") ? (
-      <div className="flex gap-2">
-        <button onClick={() => handleEditClick(p)} className="p-1.5 text-slate-500 hover:text-navyBlue bg-slate-100 hover:bg-blue-50 rounded transition-colors">
-          <Edit size={16} />
-        </button>
-        <button onClick={() => console.log("Delete", p)} className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded transition-colors">
-          <Trash2 size={16} />
-        </button>
-      </div>
-    ) : null,
+    "Cost Price": `₱${parseFloat(p.cost_price).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+    })}`,
+    "Selling Price": `₱${parseFloat(p.selling_price).toLocaleString("en-PH", {
+      minimumFractionDigits: 2,
+    })}`,
+    Stock: (
+      <span
+        className={
+          p.quantity === 0
+            ? "text-red-500 font-bold"
+            : "text-emerald-600 font-bold"
+        }
+      >
+        {p.quantity}
+      </span>
+    ),
+    Status:
+      p.quantity === 0 ? (
+        <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold uppercase">
+          Out of Stock
+        </span>
+      ) : (
+        <span className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-xs font-bold uppercase">
+          In Stock
+        </span>
+      ),
+    Actions:
+      user.role === "Admin" || user.role === "Staff" ? (
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleEditClick(p)}
+            className="p-1.5 text-slate-500 hover:text-navyBlue bg-slate-100 hover:bg-blue-50 rounded transition-colors"
+          >
+            <Edit size={16} />
+          </button>
+          <button
+            onClick={() => console.log("Delete", p)}
+            className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded transition-colors"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ) : null,
   }));
 
   // Filter Configuration for Reusable Component
   const filterConfig = [
     {
-        value: selectedCategory,
-        onChange: (e) => setSelectedCategory(e.target.value),
-        options: [
-            { value: "all", label: "All Categories" },
-            ...categories.map(cat => ({ value: cat.category_id, label: cat.category_name }))
-        ]
+      value: selectedCategory,
+      onChange: (e) => setSelectedCategory(e.target.value),
+      options: [
+        { value: "all", label: "All Categories" },
+        ...categories.map((cat) => ({
+          value: cat.category_id,
+          label: cat.category_name,
+        })),
+      ],
     },
     {
-        value: selectedStockLevel,
-        onChange: (e) => setSelectedStockLevel(e.target.value),
-        options: [
-            { value: "all", label: "All Stock Levels" },
-            { value: "in-stock", label: "In Stock" },
-            { value: "low-stock", label: "Low Stock" },
-            { value: "out-of-stock", label: "Out of Stock" }
-        ]
-    }
+      value: selectedStockLevel,
+      onChange: (e) => setSelectedStockLevel(e.target.value),
+      options: [
+        { value: "all", label: "All Stock Levels" },
+        { value: "in-stock", label: "In Stock" },
+        { value: "low-stock", label: "Low Stock" },
+        { value: "out-of-stock", label: "Out of Stock" },
+      ],
+    },
   ];
 
   return (
@@ -262,32 +313,29 @@ export default function Inventory() {
           </div>
 
           {/* Scanner & Add Button */}
-                <div className="flex flex-col sm:flex-row justify-en items-start sm:items-center gap-4 shrink-0 mt-15 lg:mt-0">
-                  <div className="w-full sm:w-auto">
-                      {/* insert search component */}
-                       <Scanner />
+          <div className="flex flex-col sm:flex-row justify-en items-start sm:items-center gap-4 shrink-0 mt-15 lg:mt-0">
+          
+              <Scanner />
 
-         {/* Add Product Button */}
-          {(user.role === "Admin" || user.role === "Staff") && (
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-              style={{ backgroundColor: "#004B8D" }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = "#003366")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = "#004B8D")
-              }
-            >
-              <PlusCircle size={18} />
-              Add Product
-            </button>
-          )}
-
-                      </div>
-                   </div>
-
+              {/* Add Product Button */}
+              {(user.role === "Admin" || user.role === "Staff") && (
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  style={{ backgroundColor: "#004B8D" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#003366")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#004B8D")
+                  }
+                >
+                  <PlusCircle size={18} />
+                  Add Product
+                </button>
+              )}
+            
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -329,18 +377,22 @@ export default function Inventory() {
         </div>
 
         {/* Reusable Filter */}
-        <Filter 
-            searchQuery={searchQuery}
-            onSearchChange={(e) => setSearchQuery(e.target.value)}
-            searchPlaceholder="Search products by name..."
-            filters={filterConfig}
-            showClearButton={searchQuery || selectedCategory !== "all" || selectedStockLevel !== "all"}
-            onClear={() => {
-                setSearchQuery("");
-                setSelectedCategory("all");
-                setSelectedStockLevel("all");
-            }}
-            resultsCount={`Showing ${filteredProducts.length} products`}
+        <Filter
+          searchQuery={searchQuery}
+          onSearchChange={(e) => setSearchQuery(e.target.value)}
+          searchPlaceholder="Search products by name..."
+          filters={filterConfig}
+          showClearButton={
+            searchQuery ||
+            selectedCategory !== "all" ||
+            selectedStockLevel !== "all"
+          }
+          onClear={() => {
+            setSearchQuery("");
+            setSelectedCategory("all");
+            setSelectedStockLevel("all");
+          }}
+          resultsCount={`Showing ${filteredProducts.length} products`}
         />
 
         {/* Table */}
@@ -506,12 +558,13 @@ export default function Inventory() {
       )}
 
       {isAlertOpen && (
-  <AlertModal
-    lowStockItems={products.filter(p => p.quantity > 0 && p.quantity <= 10)}
-    onClose={() => setIsAlertOpen(false)}
-  />
-)}
-
+        <AlertModal
+          lowStockItems={products.filter(
+            (p) => p.quantity > 0 && p.quantity <= 10
+          )}
+          onClose={() => setIsAlertOpen(false)}
+        />
+      )}
 
       <EditProductModal
         isOpen={isEditModalOpen}
