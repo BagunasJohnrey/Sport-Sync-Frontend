@@ -3,6 +3,7 @@ import Table from "../../components/Table";
 import ExportButton from "../../components/ExportButton";
 import { DollarSign, TrendingUp, BarChart4 } from "lucide-react";
 import { products, categories, transactions } from "../../mockData";
+import CalendarFilter from  "../../components/CalendarFilter";
 
 const categoryMap = categories.reduce((acc, c) => {
     acc[c.id] = c.category_name;
@@ -72,10 +73,13 @@ export default function InventoryReport() {
   return (
     <div className="flex flex-col space-y-5">
       <div className="flex gap-5 justify-end">
+         <CalendarFilter/>
         <div>
           <ExportButton />
         </div>
         {/* insert calendar */}
+
+       
       </div>
 
       {/* KPI */}

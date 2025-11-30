@@ -5,6 +5,8 @@ import Chart from "../../components/Chart";
 import Table from "../../components/Table";
 import { DollarSign, ShoppingCart, Activity, Star } from "lucide-react";
 import { products, sales, categories, transactions } from "../../mockData";
+import CalendarFilter from  "../../components/CalendarFilter";
+
 
 // ... (Keep your existing data preparation logic for charts) ...
 // 1. Line Chart Data
@@ -153,6 +155,8 @@ export default function SalesReport() {
       <div className="flex gap-5 justify-end">
 
       {/* Calendar */}
+
+       <CalendarFilter/>
        
 
           <ExportButton

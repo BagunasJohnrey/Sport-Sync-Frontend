@@ -4,6 +4,7 @@ import Table from "../../components/Table";
 import { transactions, products } from "../../mockData";
 import { User, Eye } from "lucide-react";
 import TransactionModal from "../../components/TransactionModal";
+import CalendarFilter from  "../../components/CalendarFilter";
 
 export default function SalesReport() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -117,10 +118,14 @@ export default function SalesReport() {
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex gap-5 justify-end">
+        <CalendarFilter/>
         <div>
+           
           <ExportButton />
+
         </div>
         {/* insert calendar */}
+        
       </div>
       <Table
         tableName="Transaction History"
