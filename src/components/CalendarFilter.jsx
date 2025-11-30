@@ -188,7 +188,7 @@ export default function CalendarFilter({ onChange }) {
                   onClick={() => handleSelectFilter(option)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     selectedFilter === option 
-                      ? "bg-blue-800 text-white shadow-sm" 
+                      ? "bg-blue-500 text-white shadow-sm" 
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >

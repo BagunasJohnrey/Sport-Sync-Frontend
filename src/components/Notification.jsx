@@ -14,7 +14,7 @@ export default function NotificationPanel({ onClose }) {
 useEffect(() => {
   const handleOutside = (e) => {
     if (panelRef.current && !panelRef.current.contains(e.target)) {
-      setShowNotifications(false);
+      setNotifications(false);
     }
   };
   document.addEventListener("mousedown", handleOutside);
