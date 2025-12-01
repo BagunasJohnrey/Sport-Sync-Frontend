@@ -119,7 +119,6 @@ export default function POS() {
         <div className="flex-1 flex flex-col gap-4 h-full overflow-hidden">
           
           {/* Header & Search */}
-          {/* Reduced z-index to 10 to ensure it stays under sidebar */}
           <div className="shrink-0 mt-5 lg:mt-0 w-full mb-4 relative z-10"> 
             <div className="flex items-center gap-3 w-full">
               <div className="flex-1">
@@ -181,7 +180,6 @@ export default function POS() {
         <div className="
             fixed bottom-0 left-0 right-0 h-20 bg-softWhite border-t border-slate-200 p-4 
             shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] 
-            /* FIX: Reduced z-index to 10 (Sidebar is usually 40 or 50) */
             z-10 
             lg:shadow-none lg:static lg:h-full lg:w-[400px] lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-softWhite
         ">
@@ -284,16 +282,18 @@ export default function POS() {
 
       </div>
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          duration={2000}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {/* FIX: Wrapped Toast in a high z-index relative container to ensure it stays above the fixed Cart Footer */}
+      <div className="relative z-[9999]">
+        {toast && (
+            <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={2000}
+            onClose={() => setToast(null)}
+            />
+        )}
+      </div>
 
-      {/* Mobile Cart Modal - Wrapped in high z-index div to ensure it overlays everything when active */}
       <div className="relative z-[9999]">
         <CartModal 
             isOpen={isCartOpen}

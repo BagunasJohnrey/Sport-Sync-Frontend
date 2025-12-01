@@ -6,6 +6,8 @@ import Filter from "../components/Filter";
 import Scanner from "../components/Scanner.jsx";
 import EditProductModal from "../components/inventory/EditProductModal.jsx";
 import AlertModal from "../components/inventory/AlertModal.jsx";
+// Import Toast Component
+import Toast from "../components/Toast"; 
 import { categories, products } from "../mockData"; 
 import { useAuth } from "../context/AuthContext";
 import { getCategoryMap } from "../utils/Utils.js";
@@ -28,6 +30,9 @@ export default function Inventory() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  // NEW: Toast State
+  const [toast, setToast] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -42,12 +47,10 @@ export default function Inventory() {
     barcode: "",
   });
 
-  // Filter states
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStockLevel, setSelectedStockLevel] = useState("all");
 
-  // Handle Barcode Scan Logic
   const handleScan = (scannedBarcode) => {
     const existingProduct = products.find((p) => p.barcode === scannedBarcode);
 
@@ -150,10 +153,27 @@ export default function Inventory() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // --- UPDATED SUBMIT LOGIC ---
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    setIsModalOpen(false);
+    
+    // Simple Validation
+    if (!formData.productName || !formData.category || !formData.sellingPrice) {
+      setToast({ message: "Please fill in all required fields.", type: "error" });
+      return; // Stop function if validation fails
+    }
+
+    try {
+      // Simulate API call or data saving
+      console.log("Form submitted:", formData);
+      
+      // Success Feedback
+      setToast({ message: "Product added successfully!", type: "success" });
+      setIsModalOpen(false); // Close Modal on success
+    } catch (error) {
+      // Fail Feedback
+      setToast({ message: "Failed to add product.", type: "error" });
+    }
   };
 
   const data = filteredProducts.map((p) => ({
@@ -335,14 +355,13 @@ export default function Inventory() {
       </div>
 
       {isModalOpen && (
-        // 1. CLICK OUTSIDE LOGIC
         <div 
           className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setIsModalOpen(false)} // Close when clicking backdrop
+          onClick={() => setIsModalOpen(false)}
         >
           <div 
             className="bg-softWhite rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto hide-scrollbar"
-            onClick={(e) => e.stopPropagation()} // Prevent close when clicking content
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-navyBlue flex items-center justify-between p-6 border-b">
               <div>
@@ -469,9 +488,7 @@ export default function Inventory() {
                     type="text"
                     name="barcode"
                     value={formData.barcode}
-                    // 2. READ ONLY BARCODE
                     readOnly
-                    // Added visual style for read-only state
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed focus:outline-none"
                   />
                 </div>
@@ -487,6 +504,18 @@ export default function Inventory() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* RENDER TOAST HERE */}
+      {toast && (
+        <div className="relative z-[9999]">
+            <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={2000}
+            onClose={() => setToast(null)}
+            />
         </div>
       )}
 

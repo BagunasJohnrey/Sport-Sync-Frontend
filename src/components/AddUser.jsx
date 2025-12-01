@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { Plus, X, Users } from 'lucide-react';
+// 1. Import the Toast component
+import Toast from '../components/Toast'; 
 
 export default function UserManagementHeader() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  
+  // 2. Add Toast State
+  const [toast, setToast] = useState(null);
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -21,8 +27,26 @@ export default function UserManagementHeader() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Creating user:', { ...formData, active: isActive });
-    setIsModalOpen(false);
+    
+    // 3. Simple Validation & Toast Logic
+    if (!formData.fullName || !formData.username || !formData.password) {
+        setToast({ message: "Please fill in all required fields.", type: "error" });
+        return;
+    }
+
+    try {
+        // Simulate API Success
+        console.log('Creating user:', { ...formData, active: isActive });
+        setToast({ message: "User created successfully!", type: "success" });
+        
+        // Reset form (Optional)
+        setFormData({ fullName: '', email: '', username: '', password: '', role: 'Cashier' });
+        
+        // Close modal
+        setIsModalOpen(false);
+    } catch (error) {
+        setToast({ message: "Failed to create user.", type: "error" });
+    }
   };
 
   return (
@@ -39,8 +63,16 @@ export default function UserManagementHeader() {
 
       {/* Modal Overlay */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+        <div 
+            // 4. Click Outside Logic: Close modal when clicking the backdrop
+            onClick={() => setIsModalOpen(false)}
+            className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-60 flex items-center justify-center z-50 p-4"
+        >
+          <div 
+            // 5. Stop Propagation: Prevent clicks inside the modal from closing it
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar"
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 bg-navyBlue">
               <div>
@@ -175,6 +207,18 @@ export default function UserManagementHeader() {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* 6. Render Toast */}
+      {toast && (
+        <div className="fixed z-[9999] top-5 right-5">
+            <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={3000}
+            onClose={() => setToast(null)}
+            />
         </div>
       )}
     </>

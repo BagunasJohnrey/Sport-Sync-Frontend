@@ -4,6 +4,8 @@ import { Download, FileText, File } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import domtoimage from "dom-to-image-more";
+// 1. Import your Toast component
+import Toast from "./Toast"; // Check if this path is correct for your file structure
 
 export default function ExportButton({
   className = "",
@@ -15,6 +17,9 @@ export default function ExportButton({
 }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
+  
+  // 2. Add Toast State
+  const [toast, setToast] = useState(null);
 
   // helpers
   const blobToDataURL = (blob) =>
@@ -34,28 +39,23 @@ export default function ExportButton({
     await Promise.all(
       imgs.map(async (img) => {
         try {
-          // skip blank or data urls
           if (!img.src) return;
           if (img.src.startsWith("data:")) return;
 
-          // try fetch with CORS
           const resp = await fetch(img.src, { mode: "cors", credentials: "omit" });
           if (!resp.ok) throw new Error("image fetch failed");
           const blob = await resp.blob();
           const dataUrl = await blobToDataURL(blob);
           img.setAttribute("data-orig-src", img.src);
           img.src = dataUrl;
-          // ensure no crossOrigin attribute breaks dom-to-image
           img.removeAttribute("crossorigin");
         } catch (err) {
-          // If we can't inline, hide the image so dom-to-image won't attempt to load it and throw
           console.warn("Could not inline image, hiding it:", img.src, err);
           img.style.display = "none";
         }
       })
     );
 
-    // convert canvases to images (so dom-to-image doesn't need to re-render canvas)
     const canvases = Array.from(clone.querySelectorAll("canvas"));
     canvases.forEach((canvas) => {
       try {
@@ -64,7 +64,6 @@ export default function ExportButton({
         imgEl.src = dataUrl;
         imgEl.width = canvas.width;
         imgEl.height = canvas.height;
-        // copy some inline styles so layout remains similar
         imgEl.style.cssText = canvas.style.cssText;
         canvas.parentNode.replaceChild(imgEl, canvas);
       } catch (err) {
@@ -73,7 +72,6 @@ export default function ExportButton({
       }
     });
 
-    // remove any interactive/export buttons inside clone to avoid capturing them
     const noPrintElems = clone.querySelectorAll(".no-print");
     noPrintElems.forEach((el) => (el.style.display = "none"));
 
@@ -83,7 +81,7 @@ export default function ExportButton({
   // --- CSV Export Logic ---
   const exportToCSV = () => {
     if (!data || !data.length) {
-      alert("No data to export");
+      setToast({ message: "No data available to export.", type: "warning" });
       return;
     }
     try {
@@ -112,21 +110,24 @@ export default function ExportButton({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      // Success Toast
+      setToast({ message: "CSV exported successfully!", type: "success" });
+
     } catch (error) {
       console.error("CSV Error:", error);
-      alert("CSV Export failed.");
+      setToast({ message: "Failed to export CSV.", type: "error" });
     }
   };
 
   // --- PDF Export Logic ---
   const exportToPDF = async () => {
     if (!data || !data.length) {
-      alert("No data to export");
+      setToast({ message: "No data available to export.", type: "warning" });
       return;
     }
 
     if (!domElementRef || !domElementRef.current) {
-      // still export table only if no DOM chart
       await exportTableOnlyPDF();
       return;
     }
@@ -149,11 +150,8 @@ export default function ExportButton({
       doc.text(`Generated on: ${dateStr}`, 14, currentY);
       currentY += 15;
 
-      // Capture charts (preprocess clone)
       try {
-        // wait a short moment for charts to finish rendering
         await new Promise((r) => setTimeout(r, 250));
-
         const cloned = await prepareClonedNode(domElementRef.current);
 
         const imgData = await domtoimage.toPng(cloned, {
@@ -166,7 +164,6 @@ export default function ExportButton({
             transformOrigin: "top left",
           },
           filter: (node) => {
-            // hide elements we explicitly want to exclude
             return !node.classList?.contains("no-print");
           },
         });
@@ -185,10 +182,8 @@ export default function ExportButton({
         currentY += pdfImageHeight + 10;
       } catch (imgError) {
         console.warn("Chart capture failed (Table only):", imgError);
-        // proceed to produce table only PDF
       }
 
-      // 3. Add Table
       if (currentY > pageHeight - 50) {
         doc.addPage();
         currentY = 20;
@@ -220,15 +215,18 @@ export default function ExportButton({
       });
 
       doc.save(`${fileName}.pdf`);
+      
+      // Success Toast
+      setToast({ message: "PDF exported successfully!", type: "success" });
+
     } catch (error) {
       console.error("PDF Error:", error);
-      alert("Failed to export PDF.");
+      setToast({ message: "Failed to export PDF.", type: "error" });
     } finally {
       document.body.style.cursor = "default";
     }
   };
 
-  // fallback: export PDF with table only if dom node missing
   const exportTableOnlyPDF = async () => {
     document.body.style.cursor = "wait";
     try {
@@ -254,9 +252,13 @@ export default function ExportButton({
         styles: { fontSize: 10, cellPadding: 3 },
       });
       doc.save(`${fileName}.pdf`);
+      
+      // Success Toast
+      setToast({ message: "PDF exported successfully!", type: "success" });
+
     } catch (err) {
       console.error("Table-only PDF error", err);
-      alert("Failed to export PDF.");
+      setToast({ message: "Failed to export PDF.", type: "error" });
     } finally {
       document.body.style.cursor = "default";
     }
@@ -318,6 +320,18 @@ export default function ExportButton({
               </div>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 3. Render Toast */}
+      {toast && (
+        <div className="fixed z-[9999] top-5 right-5">
+            <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={3000}
+            onClose={() => setToast(null)}
+            />
         </div>
       )}
     </div>
