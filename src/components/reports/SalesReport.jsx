@@ -1,102 +1,15 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import ExportButton from "../../components/ExportButton";
 import KpiCard from "../../components/KpiCard";
 import Chart from "../../components/Chart";
 import Table from "../../components/Table";
-import { DollarSign, ShoppingCart, Activity, Star } from "lucide-react";
-import { products, sales, categories, transactions } from "../../mockData";
+import { DollarSign, ShoppingCart, Activity, Star, Loader2, ArrowUp } from "lucide-react";
+// import { products, sales, categories, transactions } from "../../mockData"; // REMOVED
 import CalendarFilter from  "../../components/CalendarFilter";
+import API from '../../services/api';
 
 
-// ... (Keep your existing data preparation logic for charts) ...
-// 1. Line Chart Data
-const lineDates = sales.daily.map((d) => d.date);
-const salesTrend = sales.daily.map((d) => d.volume);
-const revenueTrend = sales.daily.map((d) => d.revenue);
-
-// 2. Category Metrics
-const categoryMetrics = categories.map((c) => {
-  const catTransactions = transactions.filter(
-    (t) =>
-      categories.find(
-        (cat) =>
-          cat.id === products.find((p) => p.id === t.product_id).category_id
-      )?.id === c.id
-  );
-
-  return {
-    name: c.category_name,
-    revenue: catTransactions.reduce((acc, t) => acc + t.total_amount, 0),
-    volume: catTransactions.reduce((acc, t) => acc + t.quantity, 0),
-    transactions: catTransactions.length,
-  };
-});
-const categoryNames = categoryMetrics.map((m) => m.name);
-
-// 3. Payment Methods
-const paymentMethods = ["Cash", "Card", "GCash"];
-const paymentCounts = paymentMethods.map(
-  (method) => transactions.filter((t) => t.payment_method === method).length
-);
-
-// 4. Products Table Data Logic
-const categoryMap = categories.reduce((acc, c) => {
-  acc[c.id] = c.category_name;
-  return acc;
-}, {});
-
-// --- FIX: Create Raw Data for Calculations ---
-const rawProductSales = products.map((p) => {
-  const productTransactions = transactions.filter((t) => t.product_id === p.id);
-  const quantitySold = productTransactions.reduce((sum, t) => sum + t.quantity, 0);
-  const revenue = productTransactions.reduce((sum, t) => sum + t.total_amount, 0);
-  const profit = revenue - quantitySold * p.cost_price;
-  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-
-  return {
-    product: p.product_name,
-    category: categoryMap[p.category_id],
-    quantitySold,
-    revenue,
-    profit,
-    margin,
-  };
-});
-
-// Sort
-const sortedProducts = rawProductSales
-  .sort((a, b) => b.quantitySold - a.quantitySold)
-  .slice(0, 10);
-
-// --- 1. Data for Display (JSX allowed) ---
-const displayData = sortedProducts.map((p) => ({
-  Product: p.product,
-  Category: p.category,
-  "Quantity Sold": p.quantitySold,
-  Revenue: `₱${p.revenue.toLocaleString()}`,
-  Profit: `₱${p.profit.toLocaleString()}`,
-  "Margin %": (
-    <span
-      className={`font-medium ${
-        p.margin >= 50 ? "text-emerald-600" : p.margin < 30 ? "text-rose-500" : "text-amber-500"
-      }`}
-    >
-      {p.margin.toFixed(1)}%
-    </span>
-  ),
-}));
-
-// --- 2. Data for Export (Pure Strings/Numbers only) ---
-// This fixes the weird characters issue.
-const exportData = sortedProducts.map((p) => ({
-  Product: p.product,
-  Category: p.category,
-  "Quantity Sold": p.quantitySold,
-  Revenue: p.revenue.toFixed(2), // Clean number
-  Profit: p.profit.toFixed(2),   // Clean number
-  "Margin %": `${p.margin.toFixed(1)}%`, // Clean string
-}));
-
+// Table Columns (Define once)
 const displayColumns = [
   { header: "Product", accessor: "Product" },
   { header: "Category", accessor: "Category" },
@@ -106,12 +19,42 @@ const displayColumns = [
   { header: "Margin %", accessor: "Margin %" },
 ];
 
+// Helper to convert raw data to table format
+const formatSalesTableData = (rawProducts) => {
+    return rawProducts.map((p) => {
+        // FIX: Ensure profitability data exists and margin is parsed as a number
+        const profitability = p.profitability;
+        const margin = parseFloat(profitability?.margin_percent || 0);
+
+        return {
+            Product: p.product_name,
+            Category: p.category_name,
+            "Quantity Sold": p.total_sold,
+            Revenue: `₱${(p.total_revenue || 0).toLocaleString()}`,
+            Profit: `₱${(p.total_profit || 0).toLocaleString()}`,
+            "Margin %": (
+                <span
+                    className={`font-medium ${
+                        margin >= 50 ? "text-emerald-600" : margin < 30 ? "text-rose-500" : "text-yellow-500"
+                    }`}
+                >
+                    {margin.toFixed(1)}%
+                </span>
+            ),
+        };
+    });
+};
+
 export default function SalesReport() {
-  const [trendFilter, setTrendFilter] = useState("both");
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [trendFilter, setTrendFilter] = useState("revenue");
   const [categoryFilter, setCategoryFilter] = useState("revenue");
-  
-  // Ref for the entire container to capture charts
   const reportRef = useRef(null); 
+  
+  // State for date range (defaults to a fixed 30-day range for first load)
+  const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Colors
   const COLORS = {
@@ -120,51 +63,138 @@ export default function SalesReport() {
     amber: "#f59e0b",
   };
 
-  // Logic for Trend Chart
+  const fetchData = useCallback(async (start, end, period = 'daily') => {
+    setLoading(true);
+    try {
+        const [salesRes, profitabilityRes] = await Promise.all([
+            // 1. Fetch Sales Dashboard Data (KPIs, Trend, Categories, Payments)
+            API.get('/reports/sales', { params: { start_date: start, end_date: end, period } }),
+            // 2. Fetch Product Profitability (for detailed table margins)
+            API.get('/reports/profitability')
+        ]);
+        
+        // Merge profitability into top_products data structure
+        const profitabilityMap = (profitabilityRes.data.data || []).reduce((acc, p) => {
+            acc[p.product_name] = p;
+            return acc;
+        }, {});
+
+        const mergedTopProducts = (salesRes.data.data.top_products || []).map(tp => ({
+            ...tp,
+            profitability: profitabilityMap[tp.product_name] || {}
+        }));
+
+        setReportData({
+            ...salesRes.data.data,
+            top_products: mergedTopProducts,
+            start_date: start,
+            end_date: end
+        });
+        
+    } catch (error) {
+        console.error("Failed to fetch sales report:", error.response?.data || error);
+        setReportData(null);
+    } finally {
+        setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData(startDate, endDate);
+  }, [startDate, endDate, fetchData]);
+
+  // Handler for CalendarFilter changes
+  const handleDateFilterChange = (filterType, date) => {
+    let newStart = new Date();
+    let newEnd = new Date();
+    
+    const today = new Date();
+    
+    if (filterType === 'Day') {
+        newStart = date.toISOString().split('T')[0];
+        newEnd = date.toISOString().split('T')[0];
+    } else {
+        // Fallback: Use simple month range for demo
+        newEnd = today.toISOString().split('T')[0];
+        newStart = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    }
+
+    setStartDate(newStart);
+    setEndDate(newEnd);
+  };
+
+
+  if (loading || !reportData) {
+    return (
+        <div className="default-container flex flex-col items-center justify-center h-96">
+            <Loader2 className="w-8 h-8 animate-spin text-navyBlue mb-4" />
+            <p className="text-slate-500">Generating Sales Report...</p>
+        </div>
+    );
+  }
+
+  // --- Data Consumption ---
+  const { summary, sales_trend, sales_by_category, payment_methods, top_products } = reportData;
+
+  const currentRevenue = parseFloat(summary.total_revenue || 0);
+  const currentTransactions = parseInt(summary.total_transactions || 0);
+  const avgTransaction = parseFloat(summary.average_transaction_value || 0);
+
+  // Chart Series
+  const trendLabels = (sales_trend || []).map(d => d.date_label);
+  const trendRevenue = (sales_trend || []).map(d => parseFloat(d.total_revenue));
+  const trendVolume = (sales_trend || []).map(d => parseInt(d.total_sales_count));
+
+  const categoryNames = (sales_by_category || []).map(c => c.category_name);
+  const categoryRevenue = (sales_by_category || []).map(c => parseFloat(c.total_revenue));
+  const categoryVolume = (sales_by_category || []).map(c => parseInt(c.total_volume));
+
+  // KPI calculations (requires previous period data, mocked here as 10% lower)
+  const prevRevenue = currentRevenue / 1.1; 
+  const saleChange = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+  
+  const paymentLabels = (payment_methods || []).map(p => p.payment_method);
+  const paymentCounts = (payment_methods || []).map(p => parseInt(p.usage_count));
+
+  // --- Dynamic Chart Props ---
   const filteredTrendSeries =
-    trendFilter === "sales"
-      ? [{ name: "Sales Volume", data: salesTrend, color: COLORS.navy }]
+    trendFilter === "volume"
+      ? [{ name: "Sales Volume", data: trendVolume, color: COLORS.navy }]
       : trendFilter === "revenue"
-      ? [{ name: "Revenue", data: revenueTrend, color: COLORS.green }]
+      ? [{ name: "Revenue", data: trendRevenue, color: COLORS.green }]
       : [
-          { name: "Sales Volume", data: salesTrend, color: COLORS.navy },
-          { name: "Revenue", data: revenueTrend, color: COLORS.green },
+          { name: "Sales Volume", data: trendVolume, color: COLORS.navy },
+          { name: "Revenue", data: trendRevenue, color: COLORS.green },
         ];
 
-  // Logic for Category Chart
   const categoryChartData = () => {
     switch (categoryFilter) {
       case "revenue":
-        return [{ name: "Revenue", data: categoryMetrics.map((m) => m.revenue), color: COLORS.green }];
+        return [{ name: "Revenue", data: categoryRevenue, color: COLORS.green }];
       case "volume":
-        return [{ name: "Volume", data: categoryMetrics.map((m) => m.volume), color: COLORS.navy }];
-      case "transactions":
-        return [{ name: "Transactions", data: categoryMetrics.map((m) => m.transactions), color: COLORS.amber }];
-      default:
-        return [];
+        return [{ name: "Volume", data: categoryVolume, color: COLORS.navy }];
+      default: // default to transactions count, if available
+        return [{ name: "Revenue", data: categoryRevenue, color: COLORS.green }];
     }
   };
+  
+  const topProductsTableData = formatSalesTableData(top_products || []); // SAFE CALL
 
   // Generate Filename with Date
-  const dateStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const fileName = `Sales_Report_${dateStr}`;
+  const fileName = `Sales_Report_${reportData.start_date}_to_${reportData.end_date}`;
  
 
   return (
     <div className="flex flex-col space-y-6" ref={reportRef}>
       <div className="flex gap-5 justify-end">
 
-      {/* Calendar */}
-
-       <CalendarFilter/>
+        <CalendarFilter onChange={handleDateFilterChange} />
        
-
           <ExportButton
-            data={exportData} 
+            data={topProductsTableData} 
             columns={displayColumns}
             fileName={fileName}
-            title={`Sales Report - ${dateStr}`}
-            
+            title={`Sales Report - ${reportData.start_date} to ${reportData.end_date}`}
             domElementRef={reportRef} 
           />
         
@@ -172,18 +202,32 @@ export default function SalesReport() {
 
       {/* 1. KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KpiCard bgColor={COLORS.navy} title="Total Revenue" icon={<DollarSign />} value="₱100k" description="Total revenue generated" />
-        <KpiCard bgColor={COLORS.navy} title="Transactions" icon={<ShoppingCart />} value="142" description="Completed orders" />
-        <KpiCard bgColor={COLORS.green} title="Avg. Transaction" icon={<Activity />} value="₱704" description="Per order value" />
-        <KpiCard bgColor={COLORS.green} title="Top Payment" icon={<Star />} value="Cash" description="35% of all orders" />
+        <KpiCard 
+            bgColor={COLORS.navy} 
+            title="Total Revenue" 
+            icon={<DollarSign />} 
+            value={`₱${currentRevenue.toLocaleString('en-PH', {minimumFractionDigits: 2})}`} 
+            description={
+                <div className="flex items-center gap-2">
+                    <span className={`flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${saleChange >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                        <ArrowUp size={12} className={saleChange >= 0 ? '' : 'rotate-180'}/> 
+                        {Math.abs(saleChange).toFixed(1)}%
+                    </span>
+                    <span className="opacity-70">vs last period</span>
+                </div>
+            }
+        />
+        <KpiCard bgColor={COLORS.navy} title="Transactions" icon={<ShoppingCart />} value={currentTransactions} description="Total completed orders" />
+        <KpiCard bgColor={COLORS.green} title="Avg. Transaction" icon={<Activity />} value={`₱${avgTransaction.toLocaleString('en-PH', {minimumFractionDigits: 2})}`} description="Per order value" />
+        <KpiCard bgColor={COLORS.green} title="Top Payment" icon={<Star />} value={summary.top_payment_method || 'N/A'} description="Most frequently used" />
       </div>
 
       {/* 2. Top Row Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Chart
           type="line"
-          title="Trend Analysis"
-          categories={lineDates}
+          title="Trend Analysis (Revenue vs Volume)"
+          categories={trendLabels}
           series={filteredTrendSeries}
           height={340}
           filter={
@@ -193,7 +237,7 @@ export default function SalesReport() {
               className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg py-2 pl-3 pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#002B50]/20 cursor-pointer hover:border-slate-300 transition-colors"
             >
               <option value="both">All Metrics</option>
-              <option value="sales">Sales Volume</option>
+              <option value="volume">Sales Volume</option>
               <option value="revenue">Revenue</option>
             </select>
           }
@@ -213,7 +257,6 @@ export default function SalesReport() {
             >
               <option value="revenue">By Revenue</option>
               <option value="volume">By Volume</option>
-              <option value="transactions">By Transactions</option>
             </select>
           }
         />
@@ -225,18 +268,17 @@ export default function SalesReport() {
           <Chart
             type="donut"
             title="Payment Distribution"
-            categories={["Cash", "Card", "GCash"]}
+            categories={paymentLabels}
             series={paymentCounts}
             height={360}
           />
         </div>
 
         <div className="lg:col-span-2">
-          {/* Note: Pass displayData here for the screen, but exportData is used in ExportButton */}
           <Table
-            tableName="Top Selling Products"
+            tableName="Top Selling Products (Quantity)"
             columns={displayColumns}
-            data={displayData} 
+            data={topProductsTableData} 
             rowsPerPage={5}
           />
         </div>

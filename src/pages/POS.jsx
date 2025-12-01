@@ -1,72 +1,86 @@
-import { useState, useEffect, useCallback } from "react"; // ADDED useCallback
+import { useState, useEffect, useCallback } from "react"; 
 import Layout from "../components/Layout";
 import Scanner from "../components/Scanner";
-import Search from "../components/Search";
+import Search from "../components/Search"; // Use the updated Search component
 import CategoryButton from "../components/pos/CategoryButton.jsx";
 import Product from "../components/pos/Product.jsx";
-// import { products, categories } from "../mockData"; // REMOVED
 import CartModal from "../components/pos/CartModal";
 import CartItem from "../components/pos/CartItem";
-import { ShoppingCart, PackageOpen, Banknote, CreditCard, Smartphone, Trash2, Loader2 } from "lucide-react"; // ADDED Loader2
+import { ShoppingCart, PackageOpen, Banknote, CreditCard, Smartphone, Trash2, Loader2 } from "lucide-react"; 
 import Toast from "../components/Toast";
-import API from '../services/api'; // ADDED
-import { useAuth } from '../context/AuthContext'; // ADDED
+import API from '../services/api'; 
+import { useAuth } from '../context/AuthContext'; 
 
 export default function POS() {
-  const { user } = useAuth(); // ADDED
-  const [allProducts, setAllProducts] = useState([]); // CHANGED from products
-  const [categories, setCategories] = useState([]); // CHANGED from categories
-  const [filtered, setFiltered] = useState([]); // CHANGED to empty array
+  const { user } = useAuth(); 
+  const [allProducts, setAllProducts] = useState([]); 
+  const [categories, setCategories] = useState([]); 
+  const [filtered, setFiltered] = useState([]); 
   const [activeCategory, setActiveCategory] = useState("All");
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const [loading, setLoading] = useState(true); // ADDED
+  const [loading, setLoading] = useState(true); 
   
+  // NEW: State for search query
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [paymentMethod, setPaymentMethod] = useState("Cash");
 
   const paymentOptions = [
     { id: "Cash", icon: Banknote, label: "Cash" },
     { id: "Card", icon: CreditCard, label: "Card" },
-    { id: "Mobile", icon: Smartphone, label: "GCash" }, // CHANGED label to Mobile to match backend payment_method array
+    { id: "Mobile", icon: Smartphone, label: "GCash" }, 
   ];
   
-  // FETCH DATA FUNCTION
+  // FETCH DATA FUNCTION (Now uses search and category filters)
   const fetchProductsAndCategories = useCallback(async () => {
     setLoading(true);
     try {
         const [productsRes, categoriesRes] = await Promise.all([
-            API.get('/products', { params: { limit: 1000 } }),
+            // Use API search filter
+            API.get('/products', { 
+                params: { 
+                    limit: 1000,
+                    search: searchQuery, // Send search query to backend
+                    category_id: activeCategory === 'All' ? undefined : categories.find(c => c.category_name === activeCategory)?.category_id 
+                } 
+            }),
             API.get('/categories')
         ]);
+        
+        // Update categories if fetching globally for the first time
+        if (categories.length === 0) {
+            setCategories(categoriesRes.data.data);
+        }
+        
         setAllProducts(productsRes.data.data);
-        setCategories(categoriesRes.data.data);
+
     } catch (error) {
-        console.error("Failed to fetch POS data:", error);
+        console.error("Failed to fetch POS data:", error.response?.data || error);
         setToast({ message: "Failed to load products/categories.", type: "error" });
+        setAllProducts([]);
     } finally {
         setLoading(false);
     }
-  }, []); // Empty dependency array
+  }, [searchQuery, activeCategory, categories.length]); // Dependencies added
 
+  // Effect to run when components mount OR filters change
   useEffect(() => {
     fetchProductsAndCategories();
-  }, [fetchProductsAndCategories]); // Dependency added
+  }, [fetchProductsAndCategories]); 
 
-
-  // --- Filtering Logic ---
+  // Effect to filter locally based on the full list when allProducts updates (if filtering logic shifts to the frontend)
+  // Since we pass activeCategory to the API call above, this local filtering is now mostly redundant/handles only visual changes.
   useEffect(() => {
-    setFiltered(
-      activeCategory === "All"
-        ? allProducts
-        : allProducts.filter((p) =>
-            categories.find(
-              (c) =>
-                c.category_name === activeCategory && c.category_id === p.category_id // CHANGED c.id to c.category_id
-            )
-          )
-    );
-  }, [activeCategory, allProducts, categories]);
+    if (activeCategory === "All" && !searchQuery) {
+        setFiltered(allProducts);
+    } else {
+        // If search is active, the backend already handled the filtering, just map allProducts directly to filtered
+        setFiltered(allProducts);
+    }
+  }, [activeCategory, allProducts, searchQuery]);
+
 
   // --- Cart Handlers ---
   const addToCart = (product) => {
@@ -76,11 +90,11 @@ export default function POS() {
     }
 
     setCart((prev) => {
-      const existing = prev.find((item) => item.product_id === product.product_id); // CHANGED item.id to item.product_id
+      const existing = prev.find((item) => item.product_id === product.product_id); 
       if (existing) {
         if (existing.quantity < product.quantity) {
           return prev.map((item) =>
-            item.product_id === product.product_id // CHANGED item.id to item.product_id
+            item.product_id === product.product_id 
               ? { ...item, quantity: item.quantity + 1 }
               : item
           );
@@ -89,19 +103,33 @@ export default function POS() {
              return prev;
         }
       }
-      return [...prev, { ...product, quantity: 1, stock: product.quantity, id: product.product_id }]; // ADDED id: product.product_id
+      return [...prev, { ...product, quantity: 1, stock: product.quantity, id: product.product_id }]; 
     });
   };
 
   // --- SCANNER HANDLER ---
   const handleScanResult = (barcodeText) => {
-    const foundProduct = allProducts.find(p => p.barcode === barcodeText); // CHANGED products to allProducts
-
+    // Immediate search in current list if available
+    let foundProduct = allProducts.find(p => p.barcode === barcodeText); 
+    
     if (foundProduct) {
         addToCart(foundProduct);
         setToast({ message: `Added: ${foundProduct.product_name}`, type: "success" });
     } else {
-        setToast({ message: `Product not found (Barcode: ${barcodeText})`, type: "error" });
+        // Fallback: search API directly for the product (useful if the current product list is filtered)
+        API.get(`/products/barcode/${barcodeText}`)
+          .then(res => {
+            foundProduct = res.data.data;
+            if (foundProduct) {
+                addToCart(foundProduct);
+                setToast({ message: `Added: ${foundProduct.product_name}`, type: "success" });
+            } else {
+                setToast({ message: `Product not found (Barcode: ${barcodeText})`, type: "error" });
+            }
+          })
+          .catch(() => {
+            setToast({ message: `Product not found (Barcode: ${barcodeText})`, type: "error" });
+          });
     }
   };
 
@@ -130,15 +158,15 @@ export default function POS() {
     }
   };
 
-  const handleCheckout = async () => { // CHANGED TO ASYNC
+  const handleCheckout = async () => { 
     if (cart.length === 0) return;
 
     try {
         const transactionPayload = {
-            user_id: user.user_id, // Get the logged-in user ID
-            payment_method: paymentMethod === 'GCash' ? 'Mobile' : paymentMethod, // Map GCash to Mobile for backend
+            user_id: user.user_id, 
+            payment_method: paymentMethod === 'GCash' ? 'Mobile' : paymentMethod, 
             total_amount: totalAmount,
-            amount_paid: totalAmount, // Assuming exact payment for now
+            amount_paid: totalAmount, 
             change_due: 0,
             remarks: 'POS Sale',
             items: cart.map(item => ({
@@ -151,11 +179,12 @@ export default function POS() {
 
         setToast({ message: `Processing ${paymentMethod} payment...`, type: "info" });
         
-        await API.post('/transactions', transactionPayload); // API call
+        await API.post('/transactions', transactionPayload); 
         
         setToast({ message: "Transaction completed successfully!", type: "success" });
         setCart([]);
-        fetchProductsAndCategories(); // Re-fetch products to update stock levels
+        // Re-fetch only products to update stock levels, keeping categories cached
+        fetchProductsAndCategories(); 
 
     } catch (error) {
         const errorMessage = error.response?.data?.message || 'Transaction failed due to server error.';
@@ -177,11 +206,11 @@ export default function POS() {
         {/* --- LEFT COLUMN: PRODUCTS --- */}
         <div className="flex-1 flex flex-col gap-4 h-full overflow-hidden">
           
-          {/* Header & Search */}
+          {/* Header & Search (NEW: Search triggers API fetch via setSearchQuery) */}
           <div className="shrink-0 mt-5 lg:mt-0 w-full mb-4 relative z-10"> 
             <div className="flex items-center gap-3 w-full">
               <div className="flex-1">
-                <Search />
+                <Search onSearch={setSearchQuery} /> 
               </div>
               <div className="shrink-0">
                 <Scanner onScan={handleScanResult} />
@@ -194,7 +223,11 @@ export default function POS() {
             <CategoryButton
               categories={categories}
               active={activeCategory}
-              onSelect={setActiveCategory}
+              // When category changes, reset search query but trigger fetch
+              onSelect={(category) => {
+                setActiveCategory(category);
+                setSearchQuery('');
+              }}
             />
           </div>
 
@@ -209,7 +242,7 @@ export default function POS() {
                  </span>
             </div>
 
-            {loading ? ( // ADDED
+            {loading ? ( 
                 <div className="flex flex-col items-center justify-center h-64 text-navyBlue">
                     <Loader2 size={40} className="mb-2 animate-spin" />
                     <p>Loading products...</p>
@@ -217,18 +250,18 @@ export default function POS() {
             ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                     <PackageOpen size={48} className="mb-2 opacity-50" />
-                    <p>No products found in this category.</p>
+                    <p>No products found in this selection.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
                 {filtered.map((p) => {
-                    const cartItem = cart.find((c) => c.product_id === p.product_id); // CHANGED c.id to c.product_id
+                    const cartItem = cart.find((c) => c.product_id === p.product_id); 
                     const inCartQuantity = cartItem ? cartItem.quantity : 0;
                     const isMaxed = inCartQuantity >= p.quantity;
 
                     return (
                         <Product
-                            key={p.product_id} // CHANGED to product_id
+                            key={p.product_id} 
                             product={p}
                             onAdd={() => !isMaxed && addToCart(p)}
                             disabled={isMaxed || p.quantity === 0}
@@ -240,7 +273,7 @@ export default function POS() {
           </div>
         </div>
 
-        {/* --- RIGHT COLUMN: CART (Fixed Width on Desktop) --- */}
+        {/* --- RIGHT COLUMN: CART --- */}
         <div className="
             fixed bottom-0 left-0 right-0 h-20 bg-softWhite border-t border-slate-200 p-4 
             shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] 
@@ -288,6 +321,7 @@ export default function POS() {
                 </div>
 
                 <div className="p-5 bg-slate-50 border-t border-slate-200 mt-auto rounded-b-2xl">
+                    
                     <div className="mb-4">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mb-2 block">
                         Payment Method
@@ -346,7 +380,6 @@ export default function POS() {
 
       </div>
 
-      {/* FIX: Wrapped Toast in a high z-index relative container to ensure it stays above the fixed Cart Footer */}
       <div className="relative z-[9999]">
         {toast && (
             <Toast

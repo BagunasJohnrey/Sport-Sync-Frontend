@@ -1,124 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Layout from "../components/Layout";
 import KpiCard from "../components/KpiCard";
 import AddUser from "../components/AddUser"; 
 import Table from "../components/Table";
 import Filter from "../components/Filter";
-import { Edit2, UserX, Shield, Wallet, User, TrendingUp, UserCheck } from "lucide-react";
+import Toast from "../components/Toast";
+import API from '../services/api';
+import { Edit2, UserX, Shield, Wallet, User, TrendingUp, UserCheck, Loader2 } from "lucide-react";
 
 
 export default function Users() {
-  const totalUsers = 3;
-  const activeUsers = 3;
-  const administrators = 1;
-  const cashiers = 1;
-  
-
-  const userGrowth = 15; 
-  const activeRate = ((activeUsers / totalUsers) * 100).toFixed(0); 
-
-
-  // State
+  const [allUsers, setAllUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const users = [
-    {
-      id: 1,
-      name: "John Admin",
-      email: "admin@balayansmasher.com",
-      phone: "+63 917 123 4567",
-      role: "admin",
-      status: "Active",
-      created: "1/1/2024",
-      lastLogin: "11/26/2025",
-      initial: "J",
-    },
-    {
-      id: 2,
-      name: "Jane Staff",
-      email: "staff@balayansmasher.com",
-      phone: "+63 917 234 5678",
-      role: "staff",
-      status: "Active",
-      created: "1/15/2024",
-      lastLogin: "11/26/2025",
-      initial: "J",
-    },
-    {
-      id: 3,
-      name: "Bob Cashier",
-      email: "cashier@balayansmasher.com",
-      phone: "+63 917 345 6789",
-      role: "cashier",
-      status: "Active",
-      created: "2/1/2024",
-      lastLogin: "11/26/2025",
-      initial: "B",
-    },
-  ];
+  const rolesConfig = {
+    Admin: { title: 'Administrator', icon: Shield, iconColor: 'text-blue-400', permissions: ['Full system access', 'User management', 'System settings', 'All reports'] },
+    Staff: { title: 'Staff', icon: User, iconColor: 'text-gray-600', permissions: ['Inventory management', 'Stock adjustments', 'Product management', 'Basic dashboard'] },
+    Cashier: { title: 'Cashier', icon: Wallet, iconColor: 'text-gray-600', permissions: ['POS operations', 'View inventory', 'Basic dashboard'] }
+  };
 
-  const roles = [
-    {
-      title: 'Administrator',
-      icon: Shield,
-      iconColor: 'text-blue-400',
-      permissions: [
-        'Full system access',
-        'User management',
-        'System settings',
-        'All reports'
-      ]
-    },
-    {
-      title: 'Cashier',
-      icon: Wallet,
-      iconColor: 'text-gray-600',
-      permissions: [
-        'POS operations',
-        'View inventory',
-        'Basic dashboard'
-      ]
-    },
-    {
-      title: 'Staff',
-      icon: User,
-      iconColor: 'text-gray-600',
-      permissions: [
-        'Inventory management',
-        'Stock adjustments',
-        'Product management',
-        'Basic dashboard'
-      ]
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+        const response = await API.get('/users', {
+            params: {
+                limit: 1000,
+                role: roleFilter === 'all' ? undefined : roleFilter,
+                status: statusFilter === 'all' ? undefined : statusFilter,
+            }
+        });
+        setAllUsers(response.data.data || []);
+    } catch (error) {
+        console.error("Failed to fetch users:", error.response?.data || error);
+        setToast({ message: "Failed to load user data.", type: "error" });
+        setAllUsers([]);
+    } finally {
+        setLoading(false);
     }
-  ];
+  }, [roleFilter, statusFilter]);
 
-  // Filtering Logic
-  const filteredUsers = users.filter((user) => {
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleUserDelete = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+        const response = await API.delete(`/users/${userId}`);
+        setToast({ message: response.data.message, type: "success" });
+        fetchData(); 
+    } catch (error) {
+        const msg = error.response?.data?.message || 'Failed to delete user.';
+        setToast({ message: msg, type: "error" });
+    }
+  };
+
+
+  // Filtering Logic (Client-side search on top of server-side filtering)
+  const filteredUsers = allUsers.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    const matchesStatus =
-      statusFilter === "all" ||
-      user.status.toLowerCase() === statusFilter.toLowerCase();
-    return matchesSearch && matchesRole && matchesStatus;
+      user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
+  // KPI Calculations
+  const totalUsers = allUsers.length;
+  const activeUsers = allUsers.filter(u => u.status === 'Active').length;
+  const administrators = allUsers.filter(u => u.role === 'Admin').length;
+  const cashiers = allUsers.filter(u => u.role === 'Cashier').length;
+  const activeRate = totalUsers > 0 ? ((activeUsers / totalUsers) * 100).toFixed(0) : 0;
+  
   // Table Configuration
   const columns = [
     {
       header: "User",
-      accessor: "name",
+      accessor: "full_name",
       render: (row) => (
         <div className="flex items-center">
           <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-navyBlue font-bold text-sm border border-slate-200">
-            {row.initial}
+            {row.full_name.charAt(0)}
           </div>
           <div className="ml-3">
             <div className="text-sm font-semibold text-slate-800">
-              {row.name}
+              {row.full_name}
             </div>
             <div className="text-xs text-slate-500">{row.email}</div>
           </div>
@@ -149,17 +120,17 @@ export default function Users() {
         </span>
       ),
     },
-    { header: "Created", accessor: "created" },
-    { header: "Last Login", accessor: "lastLogin" },
+    { header: "Created", accessor: "created_at", render: (row) => new Date(row.created_at).toLocaleDateString() },
+    { header: "Last Login", accessor: "last_login", render: (row) => row.last_login ? new Date(row.last_login).toLocaleString() : 'Never' },
     {
       header: "Actions",
-      accessor: "id",
+      accessor: "user_id",
       render: (row) => (
         <div className="flex gap-2">
           <button className="p-1.5 text-slate-500 hover:text-navyBlue bg-slate-50 hover:bg-blue-50 rounded-md transition-colors">
-            <Edit2 size={16} />
+            <Edit2 size={16} /> {/* Edit functionality would require another modal/page */}
           </button>
-          <button className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-50 hover:bg-red-50 rounded-md transition-colors">
+          <button onClick={() => handleUserDelete(row.user_id)} className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-50 hover:bg-red-50 rounded-md transition-colors">
             <UserX size={16} />
           </button>
         </div>
@@ -170,24 +141,22 @@ export default function Users() {
   // Filter Configuration
   const filterConfig = [
     {
-      id: "role-filter",
       value: roleFilter,
       onChange: (e) => setRoleFilter(e.target.value),
       options: [
         { value: "all", label: "All Roles" },
-        { value: "admin", label: "Admin" },
-        { value: "staff", label: "Staff" },
-        { value: "cashier", label: "Cashier" },
+        { value: "Admin", label: "Admin" },
+        { value: "Staff", label: "Staff" },
+        { value: "Cashier", label: "Cashier" },
       ],
     },
     {
-      id: "status-filter",
       value: statusFilter,
       onChange: (e) => setStatusFilter(e.target.value),
       options: [
         { value: "all", label: "All Status" },
-        { value: "active", label: "Active" },
-        { value: "inactive", label: "Inactive" },
+        { value: "Active", label: "Active" },
+        { value: "Inactive", label: "Inactive" },
       ],
     },
   ];
@@ -203,7 +172,7 @@ export default function Users() {
             </p>
           </div>
 
-          <AddUser />
+          <AddUser onUserAdded={fetchData} setToast={setToast}/>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -212,15 +181,7 @@ export default function Users() {
           title="Total Users"
           icon={<User />}
           value={totalUsers}
-          description={
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                <TrendingUp size={12} /> 
-                {userGrowth}%
-              </span>
-              <span className="opacity-70">vs last month</span>
-            </div>
-          }
+          description={<span className="opacity-70">Total accounts</span>}
         />
 
         <KpiCard
@@ -228,14 +189,7 @@ export default function Users() {
           title="Active Users"
           icon={<UserCheck />}
           value={activeUsers}
-          description={
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                {activeRate}%
-              </span>
-              <span className="opacity-70">activity rate</span>
-            </div>
-          }
+          description={<span className="opacity-70">{activeRate}% activity rate</span>}
         />
 
         <KpiCard
@@ -243,13 +197,7 @@ export default function Users() {
           title="Administrators"
           icon={<Shield />}
           value={administrators}
-          description={
-            <div className="flex items-center gap-2">
-              <span className="text-xs opacity-70">
-                Full system access
-              </span>
-            </div>
-          }
+          description={<span className="text-xs opacity-70">Full system access</span>}
         />
 
         <KpiCard
@@ -257,13 +205,7 @@ export default function Users() {
           title="Cashiers"
           icon={<Wallet />}
           value={cashiers}
-          description={
-            <div className="flex items-center gap-2">
-              <span className="text-xs opacity-70">
-                POS operations
-              </span>
-            </div>
-          }
+          description={<span className="text-xs opacity-70">POS operations</span>}
         />
       </div>
 
@@ -282,24 +224,31 @@ export default function Users() {
           }}
           resultsCount={`Showing ${filteredUsers.length} users`}
         />
-
-        <Table
-          tableName="Users"
-          columns={columns}
-          data={filteredUsers}
-          rowsPerPage={5}
-        />
-
         
-          {/* Description */}
+        {loading ? (
+            <div className="flex flex-col items-center justify-center h-40 bg-white rounded-xl shadow-sm">
+                <Loader2 className="w-8 h-8 animate-spin text-navyBlue" />
+                <p className="text-slate-500 mt-4">Fetching user list...</p>
+            </div>
+        ) : (
+            <Table
+              tableName="Users"
+              columns={columns}
+              data={filteredUsers}
+              rowsPerPage={5}
+            />
+        )}
+        
+
+        {/* Description */}
       <div className="bg-white rounded-xl shadow-sm p-8">
         <h2 className="title mb-5">Role Permissions</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {roles.map((role, index) => {
+          {Object.entries(rolesConfig).map(([key, role], index) => {
             const Icon = role.icon;
             return (
-              <div key={index} className="space-y-4">
+              <div key={key} className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Icon className={`w-5 h-5 ${role.iconColor}`} />
                   <h3 className="text-md lg:text-lg font-semibold text-gray-900">
@@ -323,8 +272,7 @@ export default function Users() {
 
         
       </div>
+      {toast && <div className="fixed z-[9999] top-5 right-5"><Toast message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)}/></div>}
     </Layout>
   );
 }
-
-

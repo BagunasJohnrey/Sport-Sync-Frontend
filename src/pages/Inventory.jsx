@@ -7,10 +7,8 @@ import Scanner from "../components/Scanner.jsx";
 import EditProductModal from "../components/inventory/EditProductModal.jsx";
 import AlertModal from "../components/inventory/AlertModal.jsx";
 import Toast from "../components/Toast"; 
-// import { categories, products } from "../mockData"; // REMOVED MOCK IMPORTS
 import { useAuth } from "../context/AuthContext";
-// import { getCategoryMap } from "../utils/Utils.js"; // REMOVED MOCK UTILS IMPORT
-import API from '../services/api'; // ADDED
+import API from '../services/api'; 
 import {
   Package,
   AlertTriangle,
@@ -20,18 +18,17 @@ import {
   Edit,
   PlusCircle,
   X,
-  Loader2 // ADDED
+  Loader2 
 } from "lucide-react";
 
 // Helper function to create category map from API response
 const getCategoryMap = (categories) => {
   return (categories || []).reduce((acc, cat) => {
-    acc[cat.category_id] = cat.category_name; // Note: using category_id from backend model
+    acc[cat.category_id] = cat.category_name;
     return acc;
   }, {});
 };
 
-// --- FIX 2: Define Table Columns (Missing in previous version) ---
 const columns = [
     { header: "Product", accessor: "Product" },
     { header: "Category", accessor: "Category" },
@@ -46,17 +43,22 @@ const columns = [
 export default function Inventory() {
   const { user } = useAuth();
   
-  // NEW STATES FOR API DATA
-  // FIX: Initialize products as an empty array to prevent map() crash
   const [products, setProducts] = useState([]); 
   const [categories, setCategories] = useState([]);
   const [inventoryKpis, setInventoryKpis] = useState(null);
-  const [loading, setLoading] = useState(true); // Manages initial loading
+  
+  // FIX: isFetching now controls the table loading bar
+  const [isFetching, setIsFetching] = useState(true); 
+  // NEW: loading state for the *initial* data load (kpis, categories)
+  const [isInitialLoading, setIsInitialLoading] = useState(true); 
+
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const [hasAlertBeenShown, setHasAlertBeenShown] = useState(false);
 
   const [formData, setFormData] = useState({
     productName: "",
@@ -74,26 +76,23 @@ export default function Inventory() {
   
   // FETCH DATA FUNCTION
   const fetchData = useCallback(async () => {
-    setLoading(true);
-    // FIX: Use empty arrays/null defaults for safety during destructu ring
-    let fetchedCategories = [];
-    let fetchedProducts = [];
+    // Only show fetching status for the table area
+    setIsFetching(true); 
     let fetchedReport = null;
 
     try {
-      // 1. Fetch Categories
-      const catResponse = await API.get('/categories');
-      fetchedCategories = catResponse.data.data || []; // SAFE DEFAULT
-
-      setCategories(fetchedCategories);
+      // 1. Fetch Categories (Only load if missing initially)
+      if (categories.length === 0) {
+        const catResponse = await API.get('/categories');
+        setCategories(catResponse.data.data || []);
+      }
       
       // 2. Fetch Inventory Report/KPIs
       const reportResponse = await API.get('/reports/inventory');
-      fetchedReport = reportResponse.data.data || {}; // SAFE DEFAULT
-
+      fetchedReport = reportResponse.data.data || {}; 
       setInventoryKpis(fetchedReport.summary);
       
-      // 3. Fetch Products
+      // 3. Fetch Products (API handles search and category filters)
       const fetchParams = {
         limit: 1000, 
         search: searchQuery,
@@ -101,14 +100,13 @@ export default function Inventory() {
       };
 
       const prodResponse = await API.get('/products', { params: fetchParams });
-      fetchedProducts = prodResponse.data.data || []; // SAFE DEFAULT
+      const fetchedProducts = prodResponse.data.data || []; 
       
-      // Manually filter based on local stock level filter using the report's low stock logic (reorder_level)
+      // Manually filter based on local stock level filter 
       let finalProducts = fetchedProducts;
       
       if (selectedStockLevel !== 'all') {
         finalProducts = finalProducts.filter(p => {
-            // FIX: Ensure reorder_level exists or defaults to 5
             const reorderLevel = p.reorder_level || 5; 
             switch(selectedStockLevel) {
                 case 'out-of-stock':
@@ -125,41 +123,42 @@ export default function Inventory() {
       
       setProducts(finalProducts);
       
-      // Trigger Alert Modal Check after fetching
+      // FIX: Only show Alert Modal if low stock exists AND it hasn't been shown yet
       const lowStockProducts = fetchedReport.products_requiring_attention;
-      if (lowStockProducts && lowStockProducts.length > 0) {
+      if (lowStockProducts && lowStockProducts.length > 0 && !hasAlertBeenShown) {
         setIsAlertOpen(true);
+        setHasAlertBeenShown(true); // Mark as shown
       }
 
     } catch (error) {
-      console.error("Failed to fetch inventory data:", error);
-      // If any API call fails, ensure the data arrays are reset or kept empty
+      console.error("Failed to fetch inventory data:", error.response?.data || error);
+      // Reset product list on failure
       setProducts([]); 
-      setCategories([]);
       setInventoryKpis(null);
-      setToast({ message: "Failed to load inventory data. Check backend console for details.", type: "error" });
+      setToast({ message: "Failed to load inventory data. Check server connection.", type: "error" });
     } finally {
-      setLoading(false);
+      setIsFetching(false);
+      setIsInitialLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedStockLevel]); 
+  }, [searchQuery, selectedCategory, selectedStockLevel, hasAlertBeenShown, categories.length]); // Added categories.length to dependencies
   
   useEffect(() => {
+    // This runs on mount and whenever search/filter dependency states change
     fetchData();
   }, [fetchData]);
 
 
   const handleScan = (scannedBarcode) => {
-    // API call to check if product exists by barcode
     API.get(`/products/barcode/${scannedBarcode}`)
       .then(response => {
         const existingProduct = response.data.data;
         setFormData({
           productName: existingProduct.product_name,
           category: String(existingProduct.category_id),
-          sellingPrice: existingProduct.selling_price,
-          costPrice: existingProduct.cost_price,
-          initialStock: existingProduct.quantity,
-          reorderPoint: existingProduct.reorder_level || "10",
+          sellingPrice: String(existingProduct.selling_price),
+          costPrice: String(existingProduct.cost_price),
+          initialStock: String(existingProduct.quantity),
+          reorderPoint: String(existingProduct.reorder_level || "10"),
           barcode: existingProduct.barcode,
         });
         setToast({ message: `Product ${existingProduct.product_name} found!`, type: "info" });
@@ -182,7 +181,6 @@ export default function Inventory() {
   
   const handleSaveProduct = async (updatedProduct) => {
     const productId = updatedProduct.product_id;
-    // FIX: Use current 'products' state for finding the old product
     const oldProduct = products.find(p => p.product_id === productId); 
 
     try {
@@ -206,10 +204,10 @@ export default function Inventory() {
         }
 
         setToast({ message: "Product updated successfully!", type: "success" });
-        fetchData(); // Re-fetch to update the table
+        fetchData(); 
         
     } catch (error) {
-        const msg = error.response?.data?.message || 'Failed to update product.';
+        const msg = error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || 'Failed to update product due to validation error.';
         setToast({ message: msg, type: "error" });
     }
   };
@@ -239,11 +237,10 @@ export default function Inventory() {
         reorder_level: parseInt(formData.reorderPoint),
       };
 
-      // API call to create product
       const response = await API.post('/products', payload);
       
       setToast({ message: response.data.message, type: "success" });
-      fetchData(); // Re-fetch data to update table
+      fetchData(); 
       
       setIsModalOpen(false);
     } catch (error) {
@@ -258,7 +255,7 @@ export default function Inventory() {
     try {
       const response = await API.delete(`/products/${productId}`);
       setToast({ message: response.data.message, type: "success" });
-      fetchData();
+      fetchData(); 
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to delete product.';
       setToast({ message: msg, type: "error" });
@@ -267,20 +264,18 @@ export default function Inventory() {
 
   const categoryMap = getCategoryMap(categories); 
 
-  // FIX: Use products state as fallback if inventoryKpis is null
   const lowStockList = ((inventoryKpis && inventoryKpis.products_requiring_attention) || products || []).map((p) => ({
     name: p.product_name,
     sku: p.barcode,
     current: p.quantity,
-    minimum: p.reorder_level || 5, // Use backend's reorder level
+    minimum: p.reorder_level || 5, 
     unit: "units",
   }));
 
-  // FIX: Use products state directly in map, it is initialized to []
   const data = products.map((p) => ({
     id: p.product_id, 
     Product: p.product_name,
-    Category: categoryMap[p.category_id] || 'N/A', // Handle case where category is not found
+    Category: categoryMap[p.category_id] || 'N/A', 
     "Cost Price": `₱${parseFloat(p.cost_price).toLocaleString("en-PH", {
       minimumFractionDigits: 2,
     })}`,
@@ -334,7 +329,6 @@ export default function Inventory() {
       onChange: (e) => setSelectedCategory(e.target.value),
       options: [
         { value: "all", label: "All Categories" },
-        // FIX: Added key prop in map inside Filter component (this part is assumed to be fixed in Filter.jsx)
         ...categories.map((cat) => ({
           value: String(cat.category_id), 
           label: cat.category_name,
@@ -354,6 +348,92 @@ export default function Inventory() {
     },
   ];
 
+  // FIX: Conditional rendering to prevent flicker during debounce.
+  const renderTableContent = () => {
+    // If table content is actively fetching data (after a filter/search change)
+    if (isFetching && !isInitialLoading) { 
+      return (
+        <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-slate-100 bg-white">
+            <h3 className="text-navyBlue font-bold text-lg tracking-tight">
+              All Products Inventory
+            </h3>
+          </div>
+          <div className="flex flex-col items-center justify-center h-40">
+            <Loader2 className="w-6 h-6 animate-spin text-navyBlue" />
+            <p className="text-slate-500 mt-3 text-sm">Updating list...</p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Once fetching is complete, render the table
+    return (
+      <Table
+        tableName="All Products Inventory"
+        columns={columns}
+        data={data}
+        rowsPerPage={10}
+      />
+    );
+  };
+  
+  // Renders KPIs, Filter, and Table (only hides on initial full page load)
+  const renderMainContent = () => {
+      // This state manages the primary data load for KPIs and initial render
+      if (isInitialLoading) {
+          return (
+            <div className="flex flex-col items-center justify-center h-[70vh] bg-white rounded-xl shadow-sm">
+                <Loader2 className="w-8 h-8 animate-spin text-navyBlue" />
+                <p className="text-slate-500 mt-4">Initializing application data...</p>
+            </div>
+          );
+      }
+      
+      return (
+          <>
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard bgColor="#002B50" title="Total Products" icon={<Package />} value={inventoryKpis?.total_products || 0} />
+              <KpiCard bgColor="#F39C12" title="Low Stock" icon={<AlertTriangle />} value={inventoryKpis?.low_stock_count || 0} />
+              <KpiCard bgColor="#E74C3C" title="Out of Stock" icon={<TrendingDown />} value={inventoryKpis?.out_of_stock_count || 0} />
+              <KpiCard
+                bgColor="#1f781a"
+                title="Inventory Value"
+                icon={<DollarSign />}
+                value={`₱${(inventoryKpis?.total_inventory_value || 0).toLocaleString("en-PH", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}`}
+              />
+            </div>
+    
+            {/* Reusable Filter */}
+            <Filter
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery} // Passes the state setter for debouncing
+              searchPlaceholder="Search products by name..."
+              filters={filterConfig}
+              showClearButton={
+                searchQuery ||
+                selectedCategory !== "all" ||
+                selectedStockLevel !== "all"
+              }
+              onClear={() => {
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setSelectedStockLevel("all");
+              }}
+              resultsCount={`Showing ${products.length} products`}
+            />
+    
+            {/* Table */}
+            {renderTableContent()}
+          </>
+      );
+  };
+
+
   return (
     <Layout>
       <div className="space-y-5">
@@ -366,7 +446,6 @@ export default function Inventory() {
           </div>
 
           <div className="flex flex-row justify-end items-center gap-4 shrink-0 mt-15 lg:mt-0">
-            {/* FIX: Ensure key is used if scanner is rendered in a list or repeated map */}
             <Scanner key="main-scanner" onScan={handleScan} /> 
             
             {(user.role === "Admin" || user.role === "Staff") && (
@@ -399,79 +478,8 @@ export default function Inventory() {
           </div>
         </div>
 
-        {loading ? ( 
-            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-xl shadow-sm">
-                <Loader2 className="w-8 h-8 animate-spin text-navyBlue" />
-                <p className="text-slate-500 mt-4">Loading inventory data from server...</p>
-            </div>
-        ) : (
-        <>
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Products */}
-          <KpiCard
-            bgColor="#002B50"
-            title="Total Products"
-            icon={<Package />}
-            value={inventoryKpis?.total_products || 0}
-          />
+        {renderMainContent()}
 
-          {/* Low Stock */}
-          <KpiCard
-            bgColor="#F39C12"
-            title="Low Stock"
-            icon={<AlertTriangle />}
-            value={inventoryKpis?.low_stock_count || 0}
-          />
-
-          {/* Out of Stock */}
-          <KpiCard
-            bgColor="#E74C3C"
-            title="Out of Stock"
-            icon={<TrendingDown />}
-            value={inventoryKpis?.out_of_stock_count || 0}
-          />
-
-          {/* Inventory Value */}
-          <KpiCard
-            bgColor="#1f781a"
-            title="Inventory Value"
-            icon={<DollarSign />}
-            value={`₱${(inventoryKpis?.total_inventory_value || 0).toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`}
-          />
-        </div>
-
-        {/* Reusable Filter */}
-        <Filter
-          searchQuery={searchQuery}
-          onSearchChange={(e) => setSearchQuery(e.target.value)}
-          searchPlaceholder="Search products by name..."
-          filters={filterConfig}
-          showClearButton={
-            searchQuery ||
-            selectedCategory !== "all" ||
-            selectedStockLevel !== "all"
-          }
-          onClear={() => {
-            setSearchQuery("");
-            setSelectedCategory("all");
-            setSelectedStockLevel("all");
-          }}
-          resultsCount={`Showing ${products.length} products`}
-        />
-
-        {/* Table */}
-        <Table
-          tableName="All Products Inventory"
-          columns={columns}
-          data={data}
-          rowsPerPage={10}
-        />
-        </>
-        )} 
       </div>
 
       {isModalOpen && (
