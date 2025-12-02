@@ -3,8 +3,7 @@ import KpiCard from "../../components/KpiCard";
 import Table from "../../components/Table";
 import ExportButton from "../../components/ExportButton";
 import { DollarSign, Box, Boxes, AlertTriangle, Loader2 } from "lucide-react";
-// import { products, categories } from "../../mockData"; // REMOVED
-import CalendarFilter from  "../../components/CalendarFilter";
+import CalendarFilter from "../../components/CalendarFilter";
 import API from '../../services/api';
 
 const columns = [
@@ -25,7 +24,6 @@ const stockColumns = [
 export default function InventoryReport() {
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const reportRef = useRef(null); 
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -55,7 +53,7 @@ export default function InventoryReport() {
     
     const { summary, inventory_by_category, products_requiring_attention } = reportData;
 
-    // Data for Table 1 (Inventory by Category)
+    // Data for Table 1 (Inventory by Category) - Display (Keep ₱ for UI)
     const categoryData = (inventory_by_category || []).map(cat => ({
         Category: cat.category_name,
         Products: cat.product_count,
@@ -69,19 +67,12 @@ export default function InventoryReport() {
         Product: p.product_name,
         "Current Stock": p.quantity,
         "Reorder Point": p.reorder_level,
-        Status:
-            p.quantity === 0 ? (
-                <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs whitespace-nowrap">
-                    Out of Stock
-                </span>
-            ) : (
-                <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">
-                    Low Stock
-                </span>
-            ),
+        Status: p.quantity === 0 
+            ? <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs whitespace-nowrap">Out of Stock</span> 
+            : <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Low Stock</span>,
     }));
 
-    // Data for Stock Status Overview (using local calculation for quick overview)
+    // KPI Stats
     const totalProducts = parseInt(summary.total_products || 0);
     const lowStockCount = parseInt(summary.low_stock_count || 0);
     const outOfStockCount = parseInt(summary.out_of_stock_count || 0);
@@ -93,24 +84,26 @@ export default function InventoryReport() {
         { label: "Out of Stock", value: outOfStockCount, bgClass: "bg-crimsonRed" },
     ];
     
-    // Data for Export (only export tables data)
-    const exportTableData = [...categoryData, ...attentionProducts].map(item => ({
-        ...item,
-        Status: typeof item.Status === 'object' ? item.Status.props.children : item.Status // Extract text from JSX
+    // --- CLEAN EXPORT DATA ---
+    // Replace ₱ with PHP to avoid PDF encoding errors
+    const exportData = categoryData.map(item => ({
+        Category: item.Category,
+        Products: item.Products,
+        "Total Stock": item["Total Stock"],
+        "Total Value": item["Total Value"].replace('₱', 'PHP '), // FIXED
+        "Low Stock Counts": item["Low Stock Counts"]
     }));
 
     return (
-        <div className="flex flex-col space-y-5" ref={reportRef}>
+        <div className="flex flex-col space-y-5">
             <div className="flex gap-5 justify-end">
-                {/* Calendar Filter is optional here as Inventory reports are often static snapshots, but kept for consistency */}
                 <CalendarFilter />
                 <div>
                     <ExportButton
-                        data={exportTableData}
-                        columns={[...columns, ...stockColumns.filter(c => !columns.find(x => x.accessor === c.accessor))]}
-                        fileName={`Inventory_Report_${new Date().toISOString().split('T')[0]}`}
-                        title="Inventory and Stock Status Report"
-                        domElementRef={reportRef} 
+                        data={exportData}
+                        columns={columns}
+                        fileName={`Inventory_Summary_Report_${new Date().toISOString().split('T')[0]}`}
+                        title="Inventory Summary Report"
                     />
                 </div>
             </div>
