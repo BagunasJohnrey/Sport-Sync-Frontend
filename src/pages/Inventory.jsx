@@ -128,7 +128,7 @@ export default function Inventory() {
       console.error("Failed to fetch inventory data:", error.response?.data || error);
       setProducts([]); 
       setInventoryKpis(null);
-      setToast({ message: "Failed to load inventory data.", type: "error" });
+      setToast({ message: "Failed to load inventory data. Check server connection.", type: "error" });
     } finally {
       setIsFetching(false);
       setIsInitialLoading(false);
@@ -145,16 +145,12 @@ export default function Inventory() {
     API.get(`/products/barcode/${scannedBarcode}`)
       .then(response => {
         const existingProduct = response.data.data;
-        
-        // --- FIX: OPEN EDIT MODAL IF FOUND ---
         setSelectedProduct(existingProduct);
         setIsEditModalOpen(true);
         setIsModalOpen(false);
-        
         setToast({ message: `Product "${existingProduct.product_name}" found!`, type: "success" });
       })
       .catch(() => {
-        // --- FIX: OPEN ADD MODAL IF NOT FOUND ---
         setFormData({
           productName: "",
           category: "",
@@ -186,8 +182,6 @@ export default function Inventory() {
       fetchData(); 
     } catch (error) {
       const msg = error.response?.data?.message || 'Failed to delete product.';
-      
-      // If delete fails due to history, offer to Archive instead
       if (error.response?.status === 400 && msg.toLowerCase().includes('transaction history')) {
           if (window.confirm("This product cannot be deleted because it has sales history. Do you want to ARCHIVE (Deactivate) it instead?")) {
               try {
@@ -281,6 +275,7 @@ export default function Inventory() {
 
   const categoryMap = getCategoryMap(categories); 
 
+  // --- RE-ADDED MISSING VARIABLE DEFINITION ---
   const lowStockList = ((inventoryKpis && inventoryKpis.products_requiring_attention) || products || []).map((p) => ({
     name: p.product_name,
     sku: p.barcode,
@@ -361,7 +356,8 @@ export default function Inventory() {
   ];
 
   const renderTableContent = () => {
-    if (isFetching && !isInitialLoading) { 
+    // Only show loader on INITIAL load
+    if (isInitialLoading) {
       return (
         <div className="w-full bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <div className="p-6 border-b border-slate-100 bg-white">
@@ -374,6 +370,7 @@ export default function Inventory() {
         </div>
       );
     }
+    
     return <Table tableName="All Products Inventory" columns={columns} data={data} rowsPerPage={10} />;
   };
   
@@ -401,12 +398,26 @@ export default function Inventory() {
               onSearchChange={setSearchQuery}
               searchPlaceholder="Search products by name..."
               filters={filterConfig}
-              showClearButton={searchQuery || selectedCategory !== "all" || selectedStockLevel !== "all"}
-              onClear={() => { setSearchQuery(""); setSelectedCategory("all"); setSelectedStockLevel("all"); }}
+              showClearButton={
+                searchQuery ||
+                selectedCategory !== "all" ||
+                selectedStockLevel !== "all"
+              }
+              onClear={() => {
+                setSearchQuery("");
+                setSelectedCategory("all");
+                setSelectedStockLevel("all");
+              }}
               resultsCount={`Showing ${products.length} products`}
             />
     
-            {renderTableContent()}
+            {/* Table is now always rendered after initial load to prevent scroll jumps */}
+            <Table
+                tableName="All Products Inventory"
+                columns={columns}
+                data={data}
+                rowsPerPage={10}
+            />
           </>
       );
   };
@@ -417,7 +428,9 @@ export default function Inventory() {
         <div className="mb-5 flex justify-between items-start">
           <div>
             <h1 className="page-title">Inventory</h1>
-            <p className="page-description">Manage your sports equipment and stock levels</p>
+            <p className="page-description">
+              Manage your sports equipment and stock levels
+            </p>
           </div>
 
           <div className="flex flex-row justify-end items-center gap-4 shrink-0 mt-15 lg:mt-0">
@@ -426,10 +439,25 @@ export default function Inventory() {
             {(user?.role === "Admin" || user?.role === "Staff") && (
               <button
                 onClick={() => {
-                  setFormData({ productName: "", category: "", sellingPrice: "0.00", costPrice: "0.00", initialStock: "0", reorderPoint: "10", barcode: "" });
+                  setFormData({
+                    productName: "",
+                    category: "",
+                    sellingPrice: "0.00",
+                    costPrice: "0.00",
+                    initialStock: "0",
+                    reorderPoint: "10",
+                    barcode: "",
+                  });
                   setIsModalOpen(true);
                 }}
-                className="text-softWhite px-4 py-2 rounded-lg flex items-center gap-2 transition-colors bg-[#004B8D] hover:bg-[#003366]"
+                className="text-softWhite px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                style={{ backgroundColor: "#004B8D" }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#003366")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "#004B8D")
+                }
               >
                 <PlusCircle size={18} />
                 Add Product
@@ -443,18 +471,31 @@ export default function Inventory() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-softWhite rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto hide-scrollbar" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div 
+            className="bg-softWhite rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto hide-scrollbar"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="bg-navyBlue flex items-center justify-between p-6 border-b">
               <div>
                 <h2 className="text-xl font-semibold text-gray-200">
-                  {products.find(p => p.barcode === formData.barcode) ? "Product Details" : "Add New Sports Product"}
+                  {products.find(p => p.barcode === formData.barcode) 
+                    ? "Product Details" 
+                    : "Add New Sports Product"}
                 </h2>
                 <p className="text-sm text-gray-200 mt-1">
-                  {products.find(p => p.barcode === formData.barcode) ? "View or replicate existing product details." : "Fill in the details below to add a new item."}
+                  {products.find(p => p.barcode === formData.barcode)
+                    ? "View or replicate existing product details."
+                    : "Fill in the details below to add a new item."}
                 </p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-300 hover:text-slateGray transition-colors">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-gray-300 hover:text-slateGray transition-colors"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -463,62 +504,146 @@ export default function Inventory() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Name <span className="text-red-500">*</span></label>
-                    <input type="text" name="productName" value={formData.productName} onChange={handleInputChange} placeholder="Product name" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="productName"
+                      value={formData.productName}
+                      onChange={handleInputChange}
+                      placeholder="Product name"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category <span className="text-red-500">*</span></label>
-                    <select name="category" value={formData.category} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50" required>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                      required
+                    >
                       <option value="">Select category</option>
-                      {categories.map((cat) => (<option key={cat.category_id} value={cat.category_id}>{cat.category_name}</option>))}
+                      {categories.map((cat) => (
+                        <option key={cat.category_id} value={cat.category_id}>
+                          {cat.category_name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Selling Price <span className="text-red-500">*</span> (₱)</label>
-                    <input type="number" name="sellingPrice" value={formData.sellingPrice} onChange={handleInputChange} placeholder="0.00" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Selling Price <span className="text-red-500">*</span> (₱)
+                    </label>
+                    <input
+                      type="number"
+                      name="sellingPrice"
+                      value={formData.sellingPrice}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cost Price (₱)</label>
-                    <input type="number" name="costPrice" value={formData.costPrice} onChange={handleInputChange} placeholder="0.00" step="0.01" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cost Price (₱)
+                    </label>
+                    <input
+                      type="number"
+                      name="costPrice"
+                      value={formData.costPrice}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Initial Stock</label>
-                    <input type="number" name="initialStock" value={formData.initialStock} onChange={handleInputChange} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Initial Stock
+                    </label>
+                    <input
+                      type="number"
+                      name="initialStock"
+                      value={formData.initialStock}
+                      onChange={handleInputChange}
+                      placeholder="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Point</label>
-                    <input type="number" name="reorderPoint" value={formData.reorderPoint} onChange={handleInputChange} placeholder="10" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reorder Point
+                    </label>
+                    <input
+                      type="number"
+                      name="reorderPoint"
+                      value={formData.reorderPoint}
+                      onChange={handleInputChange}
+                      placeholder="10"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Barcode <span className="text-red-500">*</span></label>
-                  <input type="text" name="barcode" value={formData.barcode} onChange={handleInputChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500" required />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Barcode <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="barcode"
+                    value={formData.barcode}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                    required
+                  />
                 </div>
               </div>
-
+              
               <div className="p-6">
-                <button type="submit" className="w-full bg-navyBlue text-white py-3 rounded-lg font-medium hover:bg-green-800 transition-colors">Add Product</button>
+                <button
+                  type="submit"
+                  className="w-full bg-navyBlue text-white py-3 rounded-lg font-medium hover:bg-green-800 transition-colors"
+                >
+                  Add Product
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* RENDER TOAST HERE */}
       {toast && (
         <div className="relative z-[9999]">
-            <Toast message={toast.message} type={toast.type} duration={2000} onClose={() => setToast(null)} />
+            <Toast
+            message={toast.message}
+            type={toast.type}
+            duration={2000}
+            onClose={() => setToast(null)}
+            />
         </div>
       )}
 
       {isAlertOpen && (
-        <AlertModal lowStockItems={lowStockList} onClose={() => setIsAlertOpen(false)} />
+        <AlertModal
+          lowStockItems={lowStockList}
+          onClose={() => setIsAlertOpen(false)}
+        />
       )}
 
       <EditProductModal
