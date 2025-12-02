@@ -204,7 +204,7 @@ export default function POS() {
       <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-8rem)]">
         
         {/* --- LEFT COLUMN: PRODUCTS --- */}
-        <div className="flex-1 flex flex-col gap-4 h-full overflow-hidden">
+        <div className="flex-1 flex flex-col gap-4 h-full lg:max-w-240 overflow-hidden">
           
           {/* Header & Search (NEW: Search triggers API fetch via setSearchQuery) */}
           <div className="shrink-0 mt-5 lg:mt-0 w-full mb-4 relative z-10"> 
@@ -278,7 +278,7 @@ export default function POS() {
             fixed bottom-0 left-0 right-0 h-20 bg-softWhite border-t border-slate-200 p-4 
             shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] 
             z-10 
-            lg:shadow-none lg:static lg:h-full lg:w-[400px] lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-softWhite
+            lg:shadow-none lg:static lg:h-full lg:w-[340px] lg:flex lg:flex-col lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-softWhite
         ">
             {/* Mobile View Summary */}
             <div className="flex lg:hidden justify-between items-center w-full">
