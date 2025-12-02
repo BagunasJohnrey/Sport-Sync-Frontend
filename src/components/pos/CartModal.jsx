@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { X, ShoppingCart, Trash2, Banknote, CreditCard, Smartphone } from "lucide-react";
 import CartItem from "./CartItem";
 
@@ -9,16 +8,19 @@ export default function CartModal({
   onIncrease, 
   onDecrease, 
   onRemove, 
-  totalAmount 
+  totalAmount,
+  paymentMethod,    
+  setPaymentMethod,   
+  onCheckout         
 }) {
-  const [paymentMethod, setPaymentMethod] = useState("Cash");
 
   if (!isOpen) return null;
 
+  // IDs matched to Backend Validation (Cash, Card, Mobile)
   const paymentOptions = [
     { id: "Cash", icon: Banknote, label: "Cash" },
     { id: "Card", icon: CreditCard, label: "Card" },
-    { id: "GCash", icon: Smartphone, label: "GCash" },
+    { id: "Mobile", icon: Smartphone, label: "GCash" }, 
   ];
 
   return (
@@ -141,10 +143,13 @@ export default function CartModal({
                 {/* Checkout Button */}
                 <button 
                     disabled={cart.length === 0}
-                    onClick={() => alert(`Processing ${paymentMethod} payment for ₱${totalAmount}`)}
+                    onClick={() => {
+                        onCheckout();
+                        onClose(); 
+                    }}
                     className="col-span-3 bg-navyBlue text-white py-3.5 rounded-xl font-bold text-lg hover:bg-darkGreen transition-colors shadow-lg shadow-indigo-900/10 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                 >
-                    <span>Pay with {paymentMethod}</span>
+                    <span>Pay with {paymentMethod === 'Mobile' ? 'GCash' : paymentMethod}</span>
                 </button>
             </div>
         </div>

@@ -4,7 +4,7 @@ import KpiCard from "../../components/KpiCard";
 import Chart from "../../components/Chart";
 import Table from "../../components/Table";
 import { DollarSign, ShoppingCart, Activity, Star, Loader2, ArrowUp } from "lucide-react";
-// import { products, sales, categories, transactions } from "../../mockData"; // REMOVED
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
 import CalendarFilter from  "../../components/CalendarFilter";
 import API from '../../services/api';
 
@@ -104,23 +104,31 @@ export default function SalesReport() {
   }, [startDate, endDate, fetchData]);
 
   // Handler for CalendarFilter changes
-  const handleDateFilterChange = (filterType, date) => {
-    let newStart = new Date();
-    let newEnd = new Date();
+const handleDateFilterChange = (filterType, date) => {
+    let start, end;
     
-    const today = new Date();
-    
-    if (filterType === 'Day') {
-        newStart = date.toISOString().split('T')[0];
-        newEnd = date.toISOString().split('T')[0];
-    } else {
-        // Fallback: Use simple month range for demo
-        newEnd = today.toISOString().split('T')[0];
-        newStart = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    switch (filterType) {
+        case "Weekly":
+            start = startOfWeek(date, { weekStartsOn: 1 });
+            end = endOfWeek(date, { weekStartsOn: 1 });
+            break;
+        case "Monthly":
+            start = startOfMonth(date);
+            end = endOfMonth(date);
+            break;
+        case "Yearly":
+            start = startOfYear(date);
+            end = endOfYear(date);
+            break;
+        case "Daily":
+        default:
+            start = date;
+            end = date;
+            break;
     }
 
-    setStartDate(newStart);
-    setEndDate(newEnd);
+    setStartDate(format(start, 'yyyy-MM-dd'));
+    setEndDate(format(end, 'yyyy-MM-dd'));
   };
 
 

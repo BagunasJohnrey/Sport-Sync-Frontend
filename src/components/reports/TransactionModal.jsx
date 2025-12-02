@@ -1,13 +1,20 @@
 import { X, Receipt, Calendar, User, Package, CreditCard } from "lucide-react";
-import { products, users } from "../mockData";
 import { useEffect } from "react";
 
 export default function TransactionModal({ open, onClose, data }) {
   if (!open || !data) return null;
 
-  const cashier = users.find((u) => u.id === data.user_id);
+  const { 
+    transaction_id, 
+    transaction_date, 
+    cashier_name, 
+    items, 
+    payment_method, 
+    amount_paid, 
+    change_due, 
+    total_amount 
+  } = data;
 
-  // Close modal on Escape key
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
@@ -24,13 +31,8 @@ export default function TransactionModal({ open, onClose, data }) {
     };
   }, [open, onClose]);
 
-  const formatCurrency = (amount) => `₱${amount?.toLocaleString()}`;
-
-  const getPaymentMethodInfo = (method) => {
-  return method || "N/A"; // fallback if undefined or null
-};
-
-  const paymentInfo = getPaymentMethodInfo(data.payment_method);
+  const formatCurrency = (amount) => 
+    `₱${parseFloat(amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div
@@ -58,7 +60,7 @@ export default function TransactionModal({ open, onClose, data }) {
           <div className="mt-4 flex items-center justify-between">
             <span className="text-blue-100 text-sm">Transaction ID</span>
             <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-mono font-semibold">
-              #{data.id}
+              #{transaction_id}
             </span>
           </div>
         </div>
@@ -72,7 +74,7 @@ export default function TransactionModal({ open, onClose, data }) {
               <span className="text-sm font-medium">Date & Time</span>
             </div>
             <div className="text-sm text-gray-900 font-semibold">
-              {new Date(data.date).toLocaleString()}
+              {new Date(transaction_date).toLocaleString()}
             </div>
 
             <div className="flex items-center space-x-2 text-gray-600">
@@ -80,7 +82,7 @@ export default function TransactionModal({ open, onClose, data }) {
               <span className="text-sm font-medium">Cashier</span>
             </div>
             <div className="text-sm text-gray-900 font-semibold">
-              {cashier?.full_name}
+              {cashier_name || "Unknown"}
             </div>
           </div>
 
@@ -92,31 +94,26 @@ export default function TransactionModal({ open, onClose, data }) {
             </div>
 
             <div className="space-y-2 text-sm">
-              {data.items.map((item, idx) => {
-                const product = products.find((p) => p.id === item.product_id);
-                return (
-                  <div key={idx} className="bg-white p-3 border border-gray-300 rounded-lg">
-              <div className="flex justify-between items-start">
-                {/* Left Side */}
-                <div className="flex-1">
-                  <div className="font-semibold text-gray-900 mb-1">
-                    {product?.product_name}
-                  </div>
-                  <div className="text-gray-600 text-sm">
-                    {data.quantity} × {formatCurrency(product?.selling_price)}
+              {items && items.map((item, idx) => (
+                <div key={idx} className="bg-white p-3 border border-gray-300 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    {/* Left Side */}
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-900 mb-1">
+                        {item.product_name}
+                      </div>
+                      <div className="text-gray-600 text-sm">
+                        {item.quantity} × {formatCurrency(item.unit_price)}
+                      </div>
+                    </div>
+                    
+                    {/* Right Side */}
+                    <div className="font-semibold text-gray-900 text-right">
+                      {formatCurrency(item.total_price)}
+                    </div>
                   </div>
                 </div>
-                
-                {/* Right Side */}
-                <div className="font-semibold text-gray-900 text-right">
-                  {formatCurrency(data.total_amount)}
-                </div>
-              </div>
-            </div>
-                );
-              })}
-              
-            
+              ))}
             </div>
           </div>
 
@@ -131,19 +128,25 @@ export default function TransactionModal({ open, onClose, data }) {
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Payment Method</span>
                 <span className="font-semibold capitalize">
-  {getPaymentMethodInfo(data.payment_method)}
-</span>
+                  {payment_method || "N/A"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount Paid</span>
                 <span className="font-semibold">
-                  {formatCurrency(data.amount_paid)}
+                  {formatCurrency(amount_paid)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Change Due</span>
                 <span className="font-semibold text-green-600">
-                  {formatCurrency(data.change_due)}
+                  {formatCurrency(change_due)}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-gray-200 pt-2 mt-2">
+                <span className="text-gray-800 font-bold">Total Amount</span>
+                <span className="font-bold text-navyBlue">
+                  {formatCurrency(total_amount)}
                 </span>
               </div>
             </div>

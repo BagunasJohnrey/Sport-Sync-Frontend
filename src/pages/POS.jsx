@@ -22,7 +22,7 @@ export default function POS() {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true); 
   
-  // NEW: State for search query
+
   const [searchQuery, setSearchQuery] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState("Cash");
@@ -33,7 +33,7 @@ export default function POS() {
     { id: "Mobile", icon: Smartphone, label: "GCash" }, 
   ];
   
-  // FETCH DATA FUNCTION (Now uses search and category filters)
+
   const fetchProductsAndCategories = useCallback(async () => {
     setLoading(true);
     try {
@@ -63,20 +63,16 @@ export default function POS() {
     } finally {
         setLoading(false);
     }
-  }, [searchQuery, activeCategory, categories.length]); // Dependencies added
+  }, [searchQuery, activeCategory, categories.length]); 
 
-  // Effect to run when components mount OR filters change
   useEffect(() => {
     fetchProductsAndCategories();
   }, [fetchProductsAndCategories]); 
 
-  // Effect to filter locally based on the full list when allProducts updates (if filtering logic shifts to the frontend)
-  // Since we pass activeCategory to the API call above, this local filtering is now mostly redundant/handles only visual changes.
   useEffect(() => {
     if (activeCategory === "All" && !searchQuery) {
         setFiltered(allProducts);
     } else {
-        // If search is active, the backend already handled the filtering, just map allProducts directly to filtered
         setFiltered(allProducts);
     }
   }, [activeCategory, allProducts, searchQuery]);
@@ -116,7 +112,6 @@ export default function POS() {
         addToCart(foundProduct);
         setToast({ message: `Added: ${foundProduct.product_name}`, type: "success" });
     } else {
-        // Fallback: search API directly for the product (useful if the current product list is filtered)
         API.get(`/products/barcode/${barcodeText}`)
           .then(res => {
             foundProduct = res.data.data;
@@ -392,16 +387,21 @@ export default function POS() {
       </div>
 
       <div className="relative z-[9999]">
-        <CartModal 
-            isOpen={isCartOpen}
-            onClose={() => setIsCartOpen(false)}
-            cart={cart}
-            onIncrease={(id) => updateQuantity(id, 1)}
-            onDecrease={(id) => updateQuantity(id, -1)}
-            onRemove={removeItem}
-            totalAmount={totalAmount}
-        />
-      </div>
+  <CartModal 
+      isOpen={isCartOpen}
+      onClose={() => setIsCartOpen(false)}
+      cart={cart}
+      onIncrease={(id) => updateQuantity(id, 1)}
+      onDecrease={(id) => updateQuantity(id, -1)}
+      onRemove={removeItem}
+      totalAmount={totalAmount}
+      
+
+      paymentMethod={paymentMethod}
+      setPaymentMethod={setPaymentMethod}
+      onCheckout={handleCheckout}
+  />
+</div>
     </Layout>
   );
 }

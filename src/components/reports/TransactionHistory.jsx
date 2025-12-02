@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import ExportButton from "../../components/ExportButton";
 import Table from "../../components/Table";
-// import { transactions, products } from "../../mockData"; // REMOVED
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
 import { User, Eye, Loader2 } from "lucide-react";
-import TransactionModal from "../../components/TransactionModal";
-import CalendarFilter from  "../../components/CalendarFilter";
+import TransactionModal from "./TransactionModal";
+import CalendarFilter from "../../components/CalendarFilter";
 import API from '../../services/api';
 
 export default function TransactionHistory() {
@@ -14,8 +14,8 @@ export default function TransactionHistory() {
   const [openModal, setOpenModal] = useState(false); 
   const reportRef = useRef(null);
 
-  const [startDate, setStartDate] = useState(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   // Fetch transaction history
   const fetchData = useCallback(async () => {
@@ -42,14 +42,32 @@ export default function TransactionHistory() {
     fetchData();
   }, [fetchData]);
 
-  // Handler for CalendarFilter changes
+  // FIX: Updated case strings
   const handleDateFilterChange = (filterType, date) => {
-    // Simple implementation: forcing a month-long range from the selected date backwards
-    let newEnd = date.toISOString().split('T')[0];
-    let newStart = new Date(date.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    let start, end;
     
-    setStartDate(newStart);
-    setEndDate(newEnd);
+    switch (filterType) {
+        case "Weekly":
+            start = startOfWeek(date, { weekStartsOn: 1 });
+            end = endOfWeek(date, { weekStartsOn: 1 });
+            break;
+        case "Monthly":
+            start = startOfMonth(date);
+            end = endOfMonth(date);
+            break;
+        case "Yearly":
+            start = startOfYear(date);
+            end = endOfYear(date);
+            break;
+        case "Daily":
+        default:
+            start = date;
+            end = date;
+            break;
+    }
+    
+    setStartDate(format(start, 'yyyy-MM-dd'));
+    setEndDate(format(end, 'yyyy-MM-dd'));
   };
   
   const cashierColors = {
@@ -66,13 +84,9 @@ export default function TransactionHistory() {
 
   // Convert raw transactions to table format
   const tableData = transactions.map((t) => {
-    const cashierRole = t.role || 'Cashier'; // Fallback role if role not merged by query
-    
-    // NOTE: Item details and products array are not available in the `/transactions` list response, 
-    // only in the detailed GET /transactions/:id response. We only display general details here.
+    const cashierRole = t.role || 'Cashier'; 
     const itemsSoldCount = t.items_sold_count || 0; 
 
-    // Helper to get transaction details when viewing modal
     const handleViewDetails = async (transactionId) => {
         try {
             const response = await API.get(`/transactions/${transactionId}`);
@@ -89,28 +103,15 @@ export default function TransactionHistory() {
 
       Cashier: (
         <div className="flex items-center gap-2">
-          <span
-            className={`
-              flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide shadow-sm transition-shadow
-              ${cashierColors[cashierRole]?.bg} ${cashierColors[cashierRole]?.text} hover:shadow-md
-            `}
-          >
-            <User
-              size={14}
-              className={`${cashierColors[cashierRole]?.icon}`}
-              strokeWidth={2.5}
-            />
+          <span className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wide shadow-sm transition-shadow ${cashierColors[cashierRole]?.bg} ${cashierColors[cashierRole]?.text}`}>
+            <User size={14} className={`${cashierColors[cashierRole]?.icon}`} strokeWidth={2.5} />
             {t.cashier_name || 'N/A'}
           </span>
         </div>
       ),
 
       "Payment Method": (
-        <span
-          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-            paymentColors[t.payment_method]
-          }`}
-        >
+        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${paymentColors[t.payment_method]}`}>
           {t.payment_method}
         </span>
       ),
@@ -124,7 +125,7 @@ export default function TransactionHistory() {
       Actions: (
         <button
           className="p-2 text-navyBlue hover:text-darkGreen hover:bg-lightGray rounded transition"
-          onClick={() => handleViewDetails(t.transaction_id)} // Use the dedicated API fetcher
+          onClick={() => handleViewDetails(t.transaction_id)} 
         >
           <Eye size={18} />
         </button>

@@ -3,10 +3,10 @@ import KpiCard from "../../components/KpiCard";
 import Table from "../../components/Table";
 import ExportButton from "../../components/ExportButton";
 import { DollarSign, TrendingUp, BarChart4, Loader2 } from "lucide-react";
-// import { products, categories, transactions } from "../../mockData"; // REMOVED
-import CalendarFilter from  "../../components/CalendarFilter";
+import CalendarFilter from "../../components/CalendarFilter";
 import API from '../../services/api';
-
+// ADDED: date-fns imports
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
 
 const columns = [
     { header: "Rank", accessor: "Rank" },
@@ -19,17 +19,22 @@ const columns = [
     { header: "Status", accessor: "Status" },
 ];
 
-
 export default function Profitability() {
     const [profitData, setProfitData] = useState([]);
     const [loading, setLoading] = useState(true);
     const reportRef = useRef(null); 
 
-    const fetchData = useCallback(async () => {
+    // ADDED: State for date filtering
+    const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+
+    const fetchData = useCallback(async (start, end) => {
         setLoading(true);
         try {
-            // API call to fetch product profitability analysis
-            const response = await API.get('/reports/profitability');
+            // API call to fetch product profitability analysis with date params
+            const response = await API.get('/reports/profitability', {
+                params: { start_date: start, end_date: end }
+            });
             const rawData = response.data.data || [];
             
             // --- Process and Format Data ---
@@ -81,8 +86,36 @@ export default function Profitability() {
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchData(startDate, endDate);
+    }, [fetchData, startDate, endDate]);
+
+    // ADDED: Handler for CalendarFilter
+    const handleDateFilterChange = (filterType, date) => {
+        let start, end;
+        
+        switch (filterType) {
+            case "Weekly":
+                start = startOfWeek(date, { weekStartsOn: 1 });
+                end = endOfWeek(date, { weekStartsOn: 1 });
+                break;
+            case "Monthly":
+                start = startOfMonth(date);
+                end = endOfMonth(date);
+                break;
+            case "Yearly":
+                start = startOfYear(date);
+                end = endOfYear(date);
+                break;
+            case "Daily":
+            default:
+                start = date;
+                end = date;
+                break;
+        }
+        
+        setStartDate(format(start, 'yyyy-MM-dd'));
+        setEndDate(format(end, 'yyyy-MM-dd'));
+    };
 
     if (loading) {
         return (
@@ -114,12 +147,12 @@ export default function Profitability() {
     return (
         <div className="flex flex-col space-y-5" ref={reportRef}>
             <div className="flex gap-5 justify-end">
-                <CalendarFilter/>
+                <CalendarFilter onChange={handleDateFilterChange} />
                 <div>
                     <ExportButton
                         data={exportData}
                         columns={columns}
-                        fileName={`Profitability_Report_${new Date().toISOString().split('T')[0]}`}
+                        fileName={`Profitability_Report_${startDate}_to_${endDate}`}
                         title="Product Profitability Analysis"
                         domElementRef={reportRef}
                     />

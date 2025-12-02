@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
 
 import { 
@@ -9,6 +9,8 @@ import {
   endOfWeek, 
   isSameDay, 
   isWithinInterval,
+  addDays,    
+  subDays,    
   addWeeks,
   subWeeks,
   addMonths,
@@ -20,7 +22,7 @@ import {
 const options = ["Daily", "Weekly", "Monthly", "Yearly"];
 
 export default function CalendarFilter({ onChange }) {
-  const [selectedFilter, setSelectedFilter] = useState("Day");
+  const [selectedFilter, setSelectedFilter] = useState("Daily");
   const [open, setOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const dropdownRef = useRef(null);
@@ -39,13 +41,13 @@ export default function CalendarFilter({ onChange }) {
 
   const getDisplayText = () => {
     switch (selectedFilter) {
-      case "Day":
+      case "Daily":
         return format(selectedDate, "MMM dd, yyyy");
-      case "Week":
-        return `${format(startOfWeek(selectedDate), "MMM dd")} - ${format(endOfWeek(selectedDate), "MMM dd, yyyy")}`;
-      case "Month":
+      case "Weekly":
+        return `${format(startOfWeek(selectedDate, { weekStartsOn: 1 }), "MMM dd")} - ${format(endOfWeek(selectedDate, { weekStartsOn: 1 }), "MMM dd, yyyy")}`;
+      case "Monthly":
         return format(selectedDate, "MMMM yyyy");
-      case "Year":
+      case "Yearly":
         return format(selectedDate, "yyyy");
       default:
         return "";
@@ -55,6 +57,7 @@ export default function CalendarFilter({ onChange }) {
   const handleSelectFilter = (filter) => {
     setSelectedFilter(filter);
     if (onChange) onChange(filter, selectedDate);
+    setOpen(false);
   };
 
   const handleDateChange = (date) => {
@@ -66,22 +69,22 @@ export default function CalendarFilter({ onChange }) {
     let newDate;
     
     switch (selectedFilter) {
-      case "Day":
+      case "Daily":
         newDate = direction === "next" 
-          ? new Date(selectedDate.setDate(selectedDate.getDate() + 1))
-          : new Date(selectedDate.setDate(selectedDate.getDate() - 1));
+          ? addDays(selectedDate, 1)
+          : subDays(selectedDate, 1);
         break;
-      case "Week":
+      case "Weekly":
         newDate = direction === "next" 
           ? addWeeks(selectedDate, 1)
           : subWeeks(selectedDate, 1);
         break;
-      case "Month":
+      case "Monthly":
         newDate = direction === "next" 
           ? addMonths(selectedDate, 1)
           : subMonths(selectedDate, 1);
         break;
-      case "Year":
+      case "Yearly":
         newDate = direction === "next" 
           ? addYears(selectedDate, 1)
           : subYears(selectedDate, 1);
@@ -98,9 +101,9 @@ export default function CalendarFilter({ onChange }) {
   const getDayClassName = (date) => {
     const baseClasses = "rounded-md transition-colors duration-200";
     
-    if (selectedFilter === "Week") {
-      const weekStart = startOfWeek(selectedDate);
-      const weekEnd = endOfWeek(selectedDate);
+    if (selectedFilter === "Weekly") {
+      const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(selectedDate, { weekStartsOn: 1 });
       
       if (isWithinInterval(date, { start: weekStart, end: weekEnd })) {
         if (isSameDay(date, selectedDate)) {
@@ -117,7 +120,6 @@ export default function CalendarFilter({ onChange }) {
     return `${baseClasses} hover:bg-gray-100`;
   };
 
-  // Custom header for better navigation
   const CustomHeader = ({ date, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }) => (
     <div className="flex items-center justify-between px-3 py-3 bg-white border-b border-gray-200 rounded-t-lg">
       <button
@@ -144,12 +146,10 @@ export default function CalendarFilter({ onChange }) {
 
   return (
     <div className="relative w-72" ref={dropdownRef}>
-      {/* Main Button with Navigation */}
       <div className="flex items-center gap-2">
-
         <button
           onClick={() => navigateDate("prev")}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-300"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-300 bg-white"
         >
           <ChevronLeft size={16} />
         </button>
@@ -159,7 +159,7 @@ export default function CalendarFilter({ onChange }) {
           className="flex-1 flex items-center justify-between px-4 py-3 bg-white border border-gray-300 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         >
           <div className="flex items-center gap-3">
-            <Calendar size={18} className="text-gray-500" />
+            <CalendarIcon size={18} className="text-gray-500" />
             <span className="text-gray-800 font-semibold">{getDisplayText()}</span>
           </div>
           <ChevronDown 
@@ -170,16 +170,14 @@ export default function CalendarFilter({ onChange }) {
 
         <button
           onClick={() => navigateDate("next")}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-300"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-300 bg-white"
         >
           <ChevronRight size={16} />
         </button>
       </div>
 
-      {/* Dropdown */}
       {open && (
-        <div className="absolute z-50 mt-3 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-          {/* Filter Options */}
+        <div className="absolute z-50 mt-3 w-full bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden right-0">
           <div className="p-2 border-b border-gray-100">
             <div className="grid grid-cols-2 gap-1">
               {options.map((option) => (
@@ -198,28 +196,26 @@ export default function CalendarFilter({ onChange }) {
             </div>
           </div>
 
-          {/* Calendar */}
-          <div className="p-3">
+          <div className="p-3 flex justify-center">
             <DatePicker
               selected={selectedDate}
               onChange={handleDateChange}
               inline
-              calendarClassName="!border-0 !shadow-none"
+              calendarClassName="!border-0 !shadow-none font-sans"
               dayClassName={getDayClassName}
               renderCustomHeader={CustomHeader}
               showPopperArrow={false}
-              calendarStartDay={1} // Start week on Monday
+              calendarStartDay={1} 
             />      
-    
           </div>
 
-          {/* Quick Actions */}
           <div className="p-3 border-t border-gray-100 bg-gray-50">
             <button
               onClick={() => {
                 const today = new Date();
                 setSelectedDate(today);
                 if (onChange) onChange(selectedFilter, today);
+                setOpen(false);
               }}
               className="w-full py-2 px-3 text-sm font-medium text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
             >
