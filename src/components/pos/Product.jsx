@@ -1,8 +1,11 @@
 import { Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 
-export default function Product({ product, onAdd, disabled }) {
-  const isLowStock = product.quantity > 0 && product.quantity < 20;
-  const isOutOfStock = product.quantity === 0;
+export default function Product({ product, onAdd, disabled, inCartQuantity = 0 }) {
+  // Calculate visual stock: Total - In Cart
+  const currentStock = Math.max(0, product.quantity - inCartQuantity);
+
+  const isLowStock = currentStock > 0 && currentStock < 20;
+  const isOutOfStock = currentStock === 0;
 
   return (
     <div
@@ -51,7 +54,8 @@ export default function Product({ product, onAdd, disabled }) {
           `}>
             {/* Icon size slightly increases on larger screens for better visibility */}
             {isOutOfStock ? <AlertCircle size={14} className="sm:size-4" /> : <CheckCircle2 size={14} className="sm:size-4" />}
-            {product.quantity} left
+            {/* Display calculated current stock */}
+            {currentStock} left
           </div>
         </div>
 

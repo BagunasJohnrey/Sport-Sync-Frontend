@@ -236,14 +236,18 @@ export default function POS() {
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 pb-20 lg:pb-0">
                 {filtered.map((p) => {
+                    // 1. Check how many are already in cart
                     const cartItem = cart.find((c) => c.product_id === p.product_id); 
                     const inCartQuantity = cartItem ? cartItem.quantity : 0;
+                    
+                    // 2. Calculate if user can add more based on TOTAL stock
                     const isMaxed = inCartQuantity >= p.quantity;
 
                     return (
                         <Product
                             key={p.product_id} 
                             product={p}
+                            inCartQuantity={inCartQuantity} // 3. Pass to Product
                             onAdd={() => !isMaxed && addToCart(p)}
                             disabled={isMaxed || p.quantity === 0}
                         />
@@ -380,7 +384,6 @@ export default function POS() {
             onDecrease={(id) => updateQuantity(id, -1)}
             onRemove={removeItem}
             totalAmount={totalAmount}
-            
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
             onCheckout={handleCheckout}
