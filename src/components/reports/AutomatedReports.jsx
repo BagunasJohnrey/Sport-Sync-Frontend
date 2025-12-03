@@ -90,6 +90,15 @@ export default function AutomatedReports() {
     }
   };
 
+  // --- CLEAN EXPORT DATA ---
+  // Format dates for export so they don't show as ISO strings
+  const exportData = reports.map(report => ({
+      report_type: report.report_type,
+      period_start: new Date(report.period_start).toLocaleDateString(),
+      period_end: new Date(report.period_end).toLocaleDateString(),
+      created_at: new Date(report.created_at).toLocaleDateString()
+  }));
+
   return (
     <div className="flex flex-col space-y-5">
       {/* Schedule Header */}
@@ -117,10 +126,11 @@ export default function AutomatedReports() {
       <div className="flex justify-end gap-3">
           <CalendarFilter onChange={handleDateFilterChange} />
           <ExportButton 
-            data={reports} 
+            data={exportData} 
             columns={columns} 
             fileName={`Report_History_${dateRange.start}_${dateRange.end}`} 
             title="Report History Log"
+            // domElementRef removed to force table-only export
           />
       </div>
 

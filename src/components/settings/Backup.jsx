@@ -1,22 +1,38 @@
 import { useState } from 'react';
 import { Database, Download, Loader2, CheckCircle2 } from "lucide-react";
+import API from '../../services/api';
 
 export default function Backup() {
     const [isExporting, setIsExporting] = useState(false);
     const [statusMessage, setStatusMessage] = useState(null);
 
-    const handleExport = () => {
+    const handleExport = async () => {
         setIsExporting(true);
         setStatusMessage(null);
 
-        setTimeout(() => {
-            console.log("Exporting system data...");
-            setIsExporting(false);
+        try {
+            // Trigger the backup endpoint. 
+            // responseType: 'blob' is crucial for downloading files.
+            const response = await API.get('/reports/backup', { responseType: 'blob' });
+            
+            // Create a download link for the file
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Backup_${new Date().toISOString().split('T')[0]}.sql`); // Format: Backup_YYYY-MM-DD.sql
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            
             setStatusMessage("System data exported successfully!");
-
-
             setTimeout(() => setStatusMessage(null), 3000);
-        }, 2000);
+            
+        } catch (error) {
+            console.error("Export failed:", error);
+            alert("Backup failed. Please ensure the server is configured correctly (mysqldump required).");
+        } finally {
+            setIsExporting(false);
+        }
     };
 
     return (
