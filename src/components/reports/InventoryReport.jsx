@@ -24,6 +24,7 @@ const stockColumns = [
 export default function InventoryReport() {
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const reportRef = useRef(null); 
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -53,7 +54,7 @@ export default function InventoryReport() {
     
     const { summary, inventory_by_category, products_requiring_attention } = reportData;
 
-    // Data for Table 1 (Inventory by Category) - Display (Keep ₱ for UI)
+    // Data for Table 1 (Inventory by Category)
     const categoryData = (inventory_by_category || []).map(cat => ({
         Category: cat.category_name,
         Products: cat.product_count,
@@ -63,13 +64,14 @@ export default function InventoryReport() {
     }));
 
     // Data for Table 2 (Products Requiring Attention)
+    // Now handles both Low Stock AND Out of Stock properly
     const attentionProducts = (products_requiring_attention || []).map(p => ({
         Product: p.product_name,
         "Current Stock": p.quantity,
         "Reorder Point": p.reorder_level,
         Status: p.quantity === 0 
-            ? <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs whitespace-nowrap">Out of Stock</span> 
-            : <span className="bg-yellow-500 text-white px-2 py-1 rounded-full text-xs">Low Stock</span>,
+            ? <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap border border-red-200">Out of Stock</span> 
+            : <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-full text-xs font-bold whitespace-nowrap border border-amber-200">Low Stock</span>,
     }));
 
     // KPI Stats
@@ -84,18 +86,17 @@ export default function InventoryReport() {
         { label: "Out of Stock", value: outOfStockCount, bgClass: "bg-crimsonRed" },
     ];
     
-    // --- CLEAN EXPORT DATA ---
-    // Replace ₱ with PHP to avoid PDF encoding errors
+    // Clean Export Data
     const exportData = categoryData.map(item => ({
         Category: item.Category,
         Products: item.Products,
         "Total Stock": item["Total Stock"],
-        "Total Value": item["Total Value"].replace('₱', 'PHP '), // FIXED
+        "Total Value": item["Total Value"].replace('₱', 'PHP '), 
         "Low Stock Counts": item["Low Stock Counts"]
     }));
 
     return (
-        <div className="flex flex-col space-y-5">
+        <div className="flex flex-col space-y-5" ref={reportRef}>
             <div className="flex gap-5 justify-end">
                 <CalendarFilter />
                 <div>
@@ -104,11 +105,11 @@ export default function InventoryReport() {
                         columns={columns}
                         fileName={`Inventory_Summary_Report_${new Date().toISOString().split('T')[0]}`}
                         title="Inventory Summary Report"
+                        domElementRef={reportRef} 
                     />
                 </div>
             </div>
 
-            {/* KPI */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <KpiCard
                     bgColor="#002B50"

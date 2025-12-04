@@ -411,7 +411,6 @@ export default function Inventory() {
               resultsCount={`Showing ${products.length} products`}
             />
     
-            {/* Table is now always rendered after initial load to prevent scroll jumps */}
             <Table
                 tableName="All Products Inventory"
                 columns={columns}

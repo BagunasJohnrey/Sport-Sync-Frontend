@@ -10,30 +10,38 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
     reorderPoint: "",
   });
 
-  // State for stock adjustment logic
   const [currentStock, setCurrentStock] = useState(0);
-  const [adjustType, setAdjustType] = useState("add"); 
+  const [adjustType, setAdjustType] = useState("add");
   const [adjustQty, setAdjustQty] = useState(0);
 
-  // Populate form when product changes
+  // Populate modal when product is opened
   useEffect(() => {
-    if (product) {
+    if (product && isOpen) {
       setFormData({
         productName: product.product_name || "",
-        categoryId: product.category_id || "",
+        categoryId: Number(product.category_id) || "",
         sellingPrice: product.selling_price || "",
         costPrice: product.cost_price || "",
-        reorderPoint: product.reorder_point || 0,
+        reorderPoint: product.reorder_point ?? "", // handles undefined
       });
+
       setCurrentStock(product.quantity || 0);
-      setAdjustQty(0); 
+      setAdjustQty(0);
       setAdjustType("add");
     }
   }, [product, isOpen]);
 
+  // Unified handler
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // ensure categoryId stored as number
+    if (name === "categoryId") {
+      setFormData(prev => ({ ...prev, categoryId: Number(value) }));
+      return;
+    }
+
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const resultingStock =
@@ -45,11 +53,11 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
     const updatedProduct = {
       ...product,
       product_name: formData.productName,
-      category_id: formData.categoryId,
+      category_id: Number(formData.categoryId),
       selling_price: parseFloat(formData.sellingPrice),
       cost_price: parseFloat(formData.costPrice),
       reorder_point: parseInt(formData.reorderPoint),
-      quantity: resultingStock, 
+      quantity: resultingStock,
     };
 
     onSave(updatedProduct);
@@ -59,16 +67,15 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-50 flex items-center justify-center z-50 p-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-softWhite rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto hide-scrollbar animate-in fade-in zoom-in duration-200"
-        onClick={(e) => e.stopPropagation()} 
+        onClick={(e) => e.stopPropagation()}
       >
-        
-        {/* Modal Header */}
+        {/* Header */}
         <div className="bg-navyBlue flex items-center justify-between p-6 border-b border-navyBlue/80">
           <div>
             <h2 className="text-xl font-semibold text-gray-200">Edit Product</h2>
@@ -84,10 +91,10 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
           </button>
         </div>
 
-        {/* Modal Body */}
+        {/* Body */}
         <div className="p-6 space-y-5">
-          
-          {/* 1. Basic Details */}
+
+          {/* Basic Details */}
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -98,10 +105,10 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
                 name="productName"
                 value={formData.productName}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-navyBlue"
               />
             </div>
-            
+
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Category
@@ -110,7 +117,7 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
                 name="categoryId"
                 value={formData.categoryId}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-navyBlue"
               >
                 <option value="">Select category</option>
                 {categories.map((cat) => (
@@ -122,7 +129,7 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
             </div>
           </div>
 
-          {/* 2. Pricing & Reorder */}
+          {/* Pricing */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -133,9 +140,10 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
                 name="sellingPrice"
                 value={formData.sellingPrice}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-navyBlue"
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Cost (₱)
@@ -145,10 +153,11 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
                 name="costPrice"
                 value={formData.costPrice}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-navyBlue"
               />
             </div>
-             <div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Reorder Pt.
               </label>
@@ -157,72 +166,78 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
                 name="reorderPoint"
                 value={formData.reorderPoint}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue bg-gray-50"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-navyBlue"
               />
             </div>
           </div>
 
-          {/* 3. Stock Adjustment Section */}
+          {/* Stock Adjustment */}
           <div className="bg-gray-100 p-4 rounded-lg border border-gray-200">
             <h3 className="text-sm font-bold text-navyBlue mb-3 uppercase tracking-wide">
               Adjust Stock Level
             </h3>
-            
-            <div className="flex items-center justify-between mb-4">
-               {/* Adjustment Type Toggle */}
-               <div className="flex bg-white rounded-lg p-1 border border-gray-300 shadow-sm">
-                  <button
-                    onClick={() => setAdjustType("add")}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      adjustType === "add" 
-                      ? "bg-green-100 text-green-700 shadow-sm" 
-                      : "text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Plus size={14} /> Add
-                  </button>
-                  <button
-                    onClick={() => setAdjustType("remove")}
-                    className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                      adjustType === "remove" 
-                      ? "bg-red-100 text-red-700 shadow-sm" 
-                      : "text-gray-500 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Minus size={14} /> Remove
-                  </button>
-               </div>
 
-               {/* Adjustment Input */}
-               <input 
-                  type="number" 
-                  min="0"
-                  placeholder="Qty"
-                  value={adjustQty === 0 ? "" : adjustQty}
-                  onChange={(e) => setAdjustQty(e.target.value)}
-                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-center font-bold focus:ring-2 focus:ring-navyBlue focus:outline-none"
-               />
+            <div className="flex items-center justify-between mb-4">
+              {/* Toggle Type */}
+              <div className="flex bg-white rounded-lg p-1 border border-gray-300 shadow-sm">
+                <button
+                  onClick={() => setAdjustType("add")}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    adjustType === "add"
+                      ? "bg-green-100 text-green-700 shadow-sm"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <Plus size={14} /> Add
+                </button>
+
+                <button
+                  onClick={() => setAdjustType("remove")}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    adjustType === "remove"
+                      ? "bg-red-100 text-red-700 shadow-sm"
+                      : "text-gray-500 hover:bg-gray-50"
+                  }`}
+                >
+                  <Minus size={14} /> Remove
+                </button>
+              </div>
+
+              {/* Qty */}
+              <input
+                type="number"
+                min="0"
+                placeholder="Qty"
+                value={adjustQty === 0 ? "" : adjustQty}
+                onChange={(e) => setAdjustQty(e.target.value)}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-center font-bold focus:ring-2 focus:ring-navyBlue"
+              />
             </div>
 
-            {/* Visual Calculation */}
+            {/* Stock Preview */}
             <div className="flex items-center justify-between bg-white px-4 py-2 rounded border border-dashed border-gray-300 text-sm">
-                <div className="flex flex-col">
-                  <span className="text-gray-500 text-xs">Current</span>
-                  <span className="font-semibold text-gray-800">{currentStock}</span>
-                </div>
-                <ArrowRight size={16} className="text-gray-400" />
-                <div className="flex flex-col items-end">
-                  <span className="text-gray-500 text-xs">New Total</span>
-                  <span className={`font-bold ${resultingStock < 0 ? "text-red-600" : "text-navyBlue"}`}>
-                    {resultingStock}
-                  </span>
-                </div>
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-xs">Current</span>
+                <span className="font-semibold text-gray-800">{currentStock}</span>
+              </div>
+
+              <ArrowRight size={16} className="text-gray-400" />
+
+              <div className="flex flex-col items-end">
+                <span className="text-gray-500 text-xs">New Total</span>
+                <span
+                  className={`font-bold ${
+                    resultingStock < 0 ? "text-red-600" : "text-navyBlue"
+                  }`}
+                >
+                  {resultingStock}
+                </span>
+              </div>
             </div>
           </div>
-
         </div>
 
-        {/* Modal Footer */}
+        {/* Footer */}
         <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
           <button
             onClick={handleSubmit}
@@ -232,7 +247,6 @@ export default function EditProductModal({ isOpen, onClose, product, categories,
             Save Changes
           </button>
         </div>
-
       </div>
     </div>
   );
