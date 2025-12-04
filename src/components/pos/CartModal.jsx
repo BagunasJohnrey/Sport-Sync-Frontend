@@ -20,7 +20,7 @@ export default function CartModal({
   const paymentOptions = [
     { id: "Cash", icon: Banknote, label: "Cash" },
     { id: "Card", icon: CreditCard, label: "Card" },
-    { id: "Mobile", icon: Smartphone, label: "GCash" }, 
+    { id: "GCash", icon: Smartphone, label: "GCash" }, 
   ];
 
   return (
@@ -149,7 +149,7 @@ export default function CartModal({
                     }}
                     className="col-span-3 bg-navyBlue text-white py-3.5 rounded-xl font-bold text-lg hover:bg-darkGreen transition-colors shadow-lg shadow-indigo-900/10 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                 >
-                    <span>Pay with {paymentMethod === 'Mobile' ? 'GCash' : paymentMethod}</span>
+                    <span>Pay with {paymentMethod}</span>
                 </button>
             </div>
         </div>

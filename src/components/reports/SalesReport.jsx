@@ -3,12 +3,11 @@ import ExportButton from "../../components/ExportButton";
 import KpiCard from "../../components/KpiCard";
 import Chart from "../../components/Chart";
 import Table from "../../components/Table";
-import { DollarSign, ShoppingCart, Activity, Star, Loader2, ArrowUp } from "lucide-react";
+import { DollarSign, ShoppingCart, Activity, Star, Loader2, ArrowUp, RefreshCw } from "lucide-react";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
 import CalendarFilter from "../../components/CalendarFilter";
 import API from '../../services/api';
 
-// Table Columns
 const displayColumns = [
   { header: "Product", accessor: "Product" },
   { header: "Category", accessor: "Category" },
@@ -18,11 +17,10 @@ const displayColumns = [
   { header: "Margin %", accessor: "Margin %" },
 ];
 
-// Helper for UI (Keeps JSX and ₱)
 const formatSalesTableData = (rawProducts) => {
     return rawProducts.map((p) => {
-        const profitability = p.profitability || {};
-        const margin = parseFloat(profitability.margin_percent || 0);
+        // Use margin_percent directly from the API (already calculated correctly)
+        const margin = parseFloat(p.margin_percent || 0);
 
         return {
             Product: p.product_name,
@@ -35,7 +33,6 @@ const formatSalesTableData = (rawProducts) => {
                     {margin.toFixed(1)}%
                 </span>
             ),
-            // Hidden raw values for easy export mapping
             _rawRevenue: p.total_revenue || 0,
             _rawProfit: p.total_profit || 0,
             _rawMargin: margin
@@ -50,47 +47,41 @@ export default function SalesReport() {
   const [categoryFilter, setCategoryFilter] = useState("revenue");
   const reportRef = useRef(null); 
   
+  // FIX: Set default date range to include today properly
   const [startDate, setStartDate] = useState(format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const COLORS = { navy: "#002B50", green: "#1f781a", amber: "#f59e0b" };
 
-  const fetchData = useCallback(async (start, end, period = 'daily') => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-        const [salesRes, profitabilityRes] = await Promise.all([
-            API.get('/reports/sales', { params: { start_date: start, end_date: end, period } }),
-            API.get('/reports/profitability')
-        ]);
+        console.log(`🔄 Fetching sales data from ${startDate} to ${endDate}`);
         
-        const profitabilityMap = (profitabilityRes.data.data || []).reduce((acc, p) => {
-            acc[p.product_name] = p;
-            return acc;
-        }, {});
-
-        const mergedTopProducts = (salesRes.data.data.top_products || []).map(tp => ({
-            ...tp,
-            profitability: profitabilityMap[tp.product_name] || {}
-        }));
+        // Fetch only sales data (top_products now includes margin_percent)
+        const salesRes = await API.get('/reports/sales', { 
+          params: { start_date: startDate, end_date: endDate, period: 'daily' } 
+        });
+        
+        console.log('📊 Sales data received:', salesRes.data.data);
 
         setReportData({
             ...salesRes.data.data,
-            top_products: mergedTopProducts,
-            start_date: start,
-            end_date: end
+            start_date: startDate,
+            end_date: endDate
         });
         
     } catch (error) {
-        console.error("Failed to fetch sales report:", error.response?.data || error);
+        console.error("❌ Failed to fetch sales report:", error.response?.data || error);
         setReportData(null);
     } finally {
         setLoading(false);
     }
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
-    fetchData(startDate, endDate);
-  }, [startDate, endDate, fetchData]);
+    fetchData();
+  }, [fetchData]);
 
   const handleDateFilterChange = (filterType, date) => {
     let start, end;
@@ -128,28 +119,38 @@ export default function SalesReport() {
 
   const { summary, sales_trend, sales_by_category, payment_methods, top_products } = reportData;
   
-  // Calculations
   const currentRevenue = parseFloat(summary.total_revenue || 0);
   const currentTransactions = parseInt(summary.total_transactions || 0);
   const avgTransaction = parseFloat(summary.average_transaction_value || 0);
-  const prevRevenue = currentRevenue / 1.1; 
+  const prevRevenue = currentRevenue / 1.1;
   const saleChange = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
 
-  // Chart Data
   const trendLabels = (sales_trend || []).map(d => d.date_label);
   const trendRevenue = (sales_trend || []).map(d => parseFloat(d.total_revenue));
   const trendVolume = (sales_trend || []).map(d => parseInt(d.total_sales_count));
+  
   const categoryNames = (sales_by_category || []).map(c => c.category_name);
   const categoryRevenue = (sales_by_category || []).map(c => parseFloat(c.total_revenue));
   const categoryVolume = (sales_by_category || []).map(c => parseInt(c.total_volume));
-  const paymentLabels = (payment_methods || []).map(p => p.payment_method);
+  
+  // FIX: Clean up payment method labels and ensure GCash is displayed correctly
+  const normalizePaymentMethod = (method) => {
+      if (!method) return 'GCash';
+      const normalized = method.trim();
+      
+      // Map Mobile and Unknown to GCash
+      if (normalized === 'Mobile' || normalized === 'mobile' || normalized === 'Unknown' || normalized === '') return 'GCash';
+      
+      // Capitalize first letter for consistency
+      return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+  };
+
+  const paymentLabels = (payment_methods || []).map(p => normalizePaymentMethod(p.payment_method));
   const paymentCounts = (payment_methods || []).map(p => parseInt(p.usage_count));
 
   const filteredTrendSeries = trendFilter === "volume"
       ? [{ name: "Sales Volume", data: trendVolume, color: COLORS.navy }]
-      : trendFilter === "revenue"
-      ? [{ name: "Revenue", data: trendRevenue, color: COLORS.green }]
-      : [{ name: "Sales Volume", data: trendVolume, color: COLORS.navy }, { name: "Revenue", data: trendRevenue, color: COLORS.green }];
+      : [{ name: "Revenue", data: trendRevenue, color: COLORS.green }];
 
   const categoryChartData = () => {
     return categoryFilter === "volume"
@@ -159,33 +160,37 @@ export default function SalesReport() {
   
   const topProductsTableData = formatSalesTableData(top_products || []);
 
-  // --- CLEAN EXPORT DATA ---
   const exportData = topProductsTableData.map(item => ({
       Product: item.Product,
       Category: item.Category,
       "Quantity Sold": item["Quantity Sold"],
-      // Use PHP prefix to avoid PDF issues
-      Revenue: `PHP ${item._rawRevenue.toLocaleString()}`,
-      Profit: `PHP ${item._rawProfit.toLocaleString()}`,
-      "Margin %": `${item._rawMargin.toFixed(2)}%` // Plain string, no JSX
+      Revenue: `PHP ${item._rawRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+      Profit: `PHP ${item._rawProfit.toLocaleString(undefined, {minimumFractionDigits: 2})}`,
+      "Margin %": `${item._rawMargin.toFixed(2)}%`
   }));
 
-  const fileName = `Sales_Report_${startDate}_to_${endDate}`;
+  const fileName = `Sales_Report_${reportData.start_date}_to_${reportData.end_date}`;
+
+  // FIX: Display normalized top payment method in KPI
+  const topPaymentDisplay = normalizePaymentMethod(summary.top_payment_method);
 
   return (
     <div className="flex flex-col space-y-6" ref={reportRef}>
-      <div className="flex gap-5 justify-end">
-        <CalendarFilter onChange={handleDateFilterChange} />
-        <ExportButton
-            data={exportData} 
-            columns={displayColumns}
-            fileName={fileName}
-            title={`Sales Report - ${startDate} to ${endDate}`}
-            domElementRef={reportRef} 
-        />
-      </div>
+      
 
-      {/* KPI Cards */}
+
+         <div className="flex gap-5 justify-end">
+            <CalendarFilter onChange={handleDateFilterChange} />
+            <ExportButton
+                data={exportData} 
+                columns={displayColumns}
+                fileName={fileName}
+                title={`Sales Report - ${startDate} to ${endDate}`}
+                domElementRef={reportRef} 
+            />
+         </div>
+    
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <KpiCard 
             bgColor={COLORS.navy} title="Total Revenue" icon={<DollarSign />} value={`₱${currentRevenue.toLocaleString('en-PH', {minimumFractionDigits: 2})}`} 
@@ -193,20 +198,32 @@ export default function SalesReport() {
         />
         <KpiCard bgColor={COLORS.navy} title="Transactions" icon={<ShoppingCart />} value={currentTransactions} description="Total completed orders" />
         <KpiCard bgColor={COLORS.green} title="Avg. Transaction" icon={<Activity />} value={`₱${avgTransaction.toLocaleString('en-PH', {minimumFractionDigits: 2})}`} description="Per order value" />
-        <KpiCard bgColor={COLORS.green} title="Top Payment" icon={<Star />} value={summary.top_payment_method || 'N/A'} description="Most frequently used" />
+        <KpiCard bgColor={COLORS.green} title="Top Payment" icon={<Star />} value={topPaymentDisplay} description="Most frequently used" />
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Chart type="line" title="Trend Analysis" categories={trendLabels} series={filteredTrendSeries} height={340} filter={
-            <select value={trendFilter} onChange={(e) => setTrendFilter(e.target.value)} className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg py-2 pl-3 pr-8"><option value="both">All Metrics</option><option value="volume">Sales Volume</option><option value="revenue">Revenue</option></select>
-        } />
+        <Chart 
+            type="line" 
+            title="Trend Analysis" 
+            categories={trendLabels} 
+            series={filteredTrendSeries} 
+            height={340} 
+            filter={
+                <select 
+                    value={trendFilter} 
+                    onChange={(e) => setTrendFilter(e.target.value)} 
+                    className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg py-2 pl-3 pr-8 outline-none focus:ring-2 focus:ring-navyBlue/20"
+                >
+                    <option value="revenue">Revenue</option>
+                    <option value="volume">Sales Volume</option>
+                </select>
+            } 
+        />
         <Chart type="bar" title="Category Performance" categories={categoryNames} series={categoryChartData()} height={340} filter={
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg py-2 pl-3 pr-8"><option value="revenue">By Revenue</option><option value="volume">By Volume</option></select>
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg py-2 pl-3 pr-8 outline-none focus:ring-2 focus:ring-navyBlue/20"><option value="revenue">By Revenue</option><option value="volume">By Volume</option></select>
         } />
       </div>
 
-      {/* Table */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <Chart type="donut" title="Payment Distribution" categories={paymentLabels} series={paymentCounts} height={360} />

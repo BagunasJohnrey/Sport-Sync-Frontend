@@ -28,7 +28,7 @@ export default function POS() {
   const paymentOptions = [
     { id: "Cash", icon: Banknote, label: "Cash" },
     { id: "Card", icon: CreditCard, label: "Card" },
-    { id: "Mobile", icon: Smartphone, label: "GCash" }, 
+    { id: "GCash", icon: Smartphone, label: "GCash" }, 
   ];
   
   // --- DATA FETCHING ---
@@ -149,7 +149,7 @@ export default function POS() {
     try {
         const transactionPayload = {
             user_id: user.user_id, 
-            payment_method: paymentMethod === 'GCash' ? 'Mobile' : paymentMethod, 
+            payment_method: paymentMethod, 
             total_amount: totalAmount,
             amount_paid: totalAmount, 
             change_due: 0,
