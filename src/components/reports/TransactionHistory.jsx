@@ -2,29 +2,79 @@ import { useState, useEffect, useCallback } from "react";
 import ExportButton from "../../components/ExportButton";
 import Table from "../../components/Table";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
-import { User, Eye, Loader2 } from "lucide-react";
+import { User, Eye, Loader2, RefreshCw } from "lucide-react";
 import TransactionModal from "../../components/reports/TransactionModal";
 import CalendarFilter from "../../components/CalendarFilter";
 import API from '../../services/api';
 
 export default function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [openModal, setOpenModal] = useState(false); 
 
-  const [startDate, setStartDate] = useState(format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [dateRangeLabel, setDateRangeLabel] = useState('Last 30 Days');
+  // --- 1. CONTROLLED STATE (Single Source of Truth) ---
+  // We lift the state here so TransactionHistory controls the filter, not the other way around.
+  const [activeFilter, setActiveFilter] = useState("Daily");
+  const [activeDate, setActiveDate] = useState(new Date());
+  
+  // Derived state for API parameters
+  const [dateRange, setDateRange] = useState({
+      start: format(new Date(), 'yyyy-MM-dd'),
+      end: format(new Date(), 'yyyy-MM-dd')
+  });
+  
+  // --- 2. DATE CALCULATION LOGIC ---
+  const calculateDateRange = useCallback((filter, date) => {
+    let start, end;
+    const validDate = date instanceof Date && !isNaN(date) ? date : new Date();
 
+    switch (filter) {
+        case "Weekly":
+            start = startOfWeek(validDate, { weekStartsOn: 1 });
+            end = endOfWeek(validDate, { weekStartsOn: 1 });
+            break;
+        case "Monthly":
+            start = startOfMonth(validDate);
+            end = endOfMonth(validDate);
+            break;
+        case "Yearly":
+            start = startOfYear(validDate);
+            end = endOfYear(validDate);
+            break;
+        case "Daily":
+        default:
+            start = validDate;
+            end = validDate;
+            break;
+    }
+    return {
+        start: format(start, 'yyyy-MM-dd'),
+        end: format(end, 'yyyy-MM-dd')
+    };
+  }, []);
+
+  // Update date range automatically when UI state changes
+  useEffect(() => {
+      const range = calculateDateRange(activeFilter, activeDate);
+      setDateRange(range);
+  }, [activeFilter, activeDate, calculateDateRange]);
+
+  // --- 3. FETCH DATA ---
   const fetchData = useCallback(async () => {
+    // Prevent fetching if dates aren't ready
+    if (!dateRange.start || !dateRange.end) return;
+
     setLoading(true);
     try {
+        console.log(`Fetching Transactions: ${dateRange.start} to ${dateRange.end}`);
+        
+        // Pass the calculated dates to your real API
         const response = await API.get('/transactions', {
             params: {
                 limit: 1000,
-                start_date: startDate,
-                end_date: endDate,
+                start_date: dateRange.start,
+                end_date: dateRange.end,
             }
         });
         setTransactions(response.data.data || []);
@@ -34,58 +84,32 @@ export default function TransactionHistory() {
     } finally {
         setLoading(false);
     }
-  }, [startDate, endDate]);
+  }, [dateRange.start, dateRange.end]);
 
+  // Initial fetch
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const handleDateFilterChange = (filterType, date) => {
-    let start, end, label;
-    
-    switch (filterType) {
-        case "Weekly":
-            start = startOfWeek(date, { weekStartsOn: 1 });
-            end = endOfWeek(date, { weekStartsOn: 1 });
-            label = `Week of ${format(start, 'MMM dd')} - ${format(end, 'MMM dd, yyyy')}`;
-            break;
-        case "Monthly":
-            start = startOfMonth(date);
-            end = endOfMonth(date);
-            label = format(date, 'MMMM yyyy');
-            break;
-        case "Yearly":
-            start = startOfYear(date);
-            end = endOfYear(date);
-            label = format(date, 'yyyy');
-            break;
-        case "Daily":
-        default:
-            start = date;
-            end = date;
-            label = format(date, 'MMM dd, yyyy');
-            break;
-    }
-    
-    setStartDate(format(start, 'yyyy-MM-dd'));
-    setEndDate(format(end, 'yyyy-MM-dd'));
-    setDateRangeLabel(label);
+  // --- 4. HANDLER ---
+  // This function is passed to CalendarFilter to update the parent state
+  const handleFilterChange = (newFilter, newDate) => {
+    setActiveFilter(newFilter);
+    setActiveDate(newDate);
   };
   
-  // FIX: Normalize payment method display
+  // Helper: Normalize payment method display
   const normalizePaymentMethod = (method) => {
       if (!method) return 'GCash';
       const normalized = method.trim();
       
-      // Map Mobile and Unknown to GCash
-      if (normalized === 'Mobile' || normalized === 'mobile' || normalized === 'Unknown' || normalized === '') {
+      if (['Mobile', 'mobile', 'Unknown', ''].includes(normalized)) {
           return 'GCash';
       }
-      
-      // Capitalize first letter for consistency
       return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   };
 
+  // Styles for badges
   const cashierColors = {
     Admin: { bg: "bg-blue-100", text: "text-blue-700", icon: "text-blue-500", },
     Staff: { bg: "bg-indigo-100", text: "text-indigo-700", icon: "text-indigo-500", },
@@ -109,6 +133,7 @@ export default function TransactionHistory() {
     }
   };
 
+  // Map API data to Table format
   const tableData = transactions.map((t) => {
     const cashierRole = t.role || 'Cashier';
     const normalizedPayment = normalizePaymentMethod(t.payment_method);
@@ -164,7 +189,7 @@ export default function TransactionHistory() {
       { header: "Total", accessor: "Total" }
   ];
   
-  if (loading) {
+  if (loading && transactions.length === 0) {
       return (
         <div className="default-container flex flex-col items-center justify-center h-96">
             <Loader2 className="w-8 h-8 animate-spin text-navyBlue mb-4" />
@@ -175,36 +200,42 @@ export default function TransactionHistory() {
 
   return (
     <div className="flex flex-col space-y-6">
+      
+      {/* Header & Controls */}
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        {/* Date Range Label */}
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-slate-800">Transaction History</h2>
-          <span className="px-3 py-1 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg border border-blue-200">
-            {dateRangeLabel}
-          </span>
         </div>
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex flex-col sm:flex-row gap-3 justify-end items-center">
           <button 
             onClick={fetchData} 
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-navyBlue hover:bg-navyBlue/90 disabled:bg-slate-400 disabled:cursor-not-allowed rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:text-navyBlue hover:border-navyBlue/30 rounded-lg transition-all shadow-sm"
           >
-            <Eye size={16} className={loading ? 'animate-pulse' : ''} /> 
-            {loading ? 'Loading...' : 'Refresh'}
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} 
+            <span className="hidden sm:inline">Refresh</span>
           </button>
           
-          <CalendarFilter onChange={handleDateFilterChange}/>
+          {/* Using the Controlled Component Pattern.
+             We pass the active state down, and receive changes via the handler.
+          */}
+          <CalendarFilter 
+              activeFilter={activeFilter}
+              activeDate={activeDate}
+              onChange={handleFilterChange}
+          />
           
           <ExportButton
              data={exportData}       
              columns={exportColumns} 
-             fileName={`Transaction_History_${startDate}_to_${endDate}`}
-             title="Transaction History Report"
+             fileName={`Transaction_History_${dateRange.start}_to_${dateRange.end}`}
+             title={`Transaction History - ${dateRange.start} to ${dateRange.end}`}
           />
         </div>
       </div>
       
+      {/* Table Section */}
       {tableData.length > 0 ? (
           <Table
             tableName={`${transactions.length} Transaction${transactions.length !== 1 ? 's' : ''} Found`}
@@ -214,8 +245,8 @@ export default function TransactionHistory() {
           />
       ) : (
           <div className="default-container flex flex-col items-center justify-center h-64 text-slate-400 border border-dashed border-slate-300 rounded-xl">
-              <p className="text-lg font-medium">No transactions found for this period.</p>
-              <p className="text-sm">Try changing the date filter or checking in later.</p>
+              <p className="text-lg font-medium">No transactions found.</p>
+              <p className="text-sm">Try selecting a different date range.</p>
           </div>
       )}
 
