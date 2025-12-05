@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import KpiCard from "../../components/KpiCard";
 import Table from "../../components/Table";
 import ExportButton from "../../components/ExportButton";
-import { DollarSign, TrendingUp, BarChart4, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp, BarChart4, Loader2, RefreshCw } from "lucide-react";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
 import CalendarFilter from "../../components/CalendarFilter";
 import API from '../../services/api';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, format } from "date-fns";
 
 const columns = [
     { header: "Rank", accessor: "Rank" },
@@ -20,30 +20,84 @@ const columns = [
 
 export default function Profitability() {
     const [profitData, setProfitData] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const reportRef = useRef(null);
 
-    const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-    const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+    // --- 1. CONTROLLED STATE (Single Source of Truth) ---
+    // Default to "Monthly" as profitability is usually a monthly metric
+    const [activeFilter, setActiveFilter] = useState("Monthly"); 
+    const [activeDate, setActiveDate] = useState(new Date());
 
-    const fetchData = useCallback(async (start, end) => {
+    // Derived state for API
+    const [dateRange, setDateRange] = useState({
+        start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+        end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+    });
+
+    // --- 2. DATE CALCULATION LOGIC ---
+    const calculateDateRange = useCallback((filter, date) => {
+        let start, end;
+        const validDate = date instanceof Date && !isNaN(date) ? date : new Date();
+
+        switch (filter) {
+            case "Weekly":
+                start = startOfWeek(validDate, { weekStartsOn: 1 });
+                end = endOfWeek(validDate, { weekStartsOn: 1 });
+                break;
+            case "Monthly":
+                start = startOfMonth(validDate);
+                end = endOfMonth(validDate);
+                break;
+            case "Yearly":
+                start = startOfYear(validDate);
+                end = endOfYear(validDate);
+                break;
+            case "Daily":
+            default:
+                start = validDate;
+                end = validDate;
+                break;
+        }
+        return {
+            start: format(start, 'yyyy-MM-dd'),
+            end: format(end, 'yyyy-MM-dd')
+        };
+    }, []);
+
+    // Update date range when UI state changes
+    useEffect(() => {
+        const range = calculateDateRange(activeFilter, activeDate);
+        setDateRange(range);
+    }, [activeFilter, activeDate, calculateDateRange]);
+
+    // --- 3. FETCH DATA ---
+    const fetchData = useCallback(async () => {
+        if (!dateRange.start || !dateRange.end) return;
+        console.log("3. API Call Triggered with:", dateRange);
+        
         setLoading(true);
         try {
+            console.log(`Fetching Profitability: ${dateRange.start} to ${dateRange.end}`);
+
             const response = await API.get('/reports/profitability', {
-                params: { start_date: start, end_date: end }
+                params: { start_date: dateRange.start, end_date: dateRange.end }
             });
+
+            console.log("4. SERVER RESPONSE:", response.data.data);
+            
             const rawData = response.data.data || [];
             
             const processedData = rawData.map((p, index) => {
                 const margin = parseFloat(p.margin_percent || 0);
                 let status = "Average";
-                let statusBg = "bg-amberOrange";
+                let statusBg = "bg-amber-500"; // Changed to Tailwind standard name
                 
                 if (margin >= 50) {
                     status = "Excellent";
-                    statusBg = "bg-darkGreen";
+                    statusBg = "bg-emerald-600";
                 } else if (margin < 30) {
                     status = "Poor";
-                    statusBg = "bg-crimsonRed";
+                    statusBg = "bg-rose-500";
                 }
 
                 return {
@@ -54,16 +108,16 @@ export default function Profitability() {
                     "Selling Price": `₱${parseFloat(p.selling_price || 0).toLocaleString()}`,
                     "Gross Profit": `₱${parseFloat(p.gross_profit || 0).toLocaleString()}`,
                     "Margin %": (
-                        <span className={margin >= 50 ? "text-green-600" : margin < 30 ? "text-red-500" : "text-yellow-500"}>
+                        <span className={`font-semibold ${margin >= 50 ? "text-emerald-600" : margin < 30 ? "text-rose-500" : "text-amber-500"}`}>
                             {margin.toFixed(2)}%
                         </span>
                     ),
                     Status: (
-                        <span className={`text-white px-2 py-1 rounded-full text-xs ${statusBg}`}>
+                        <span className={`text-white px-2 py-1 rounded-full text-xs font-bold ${statusBg}`}>
                             {status}
                         </span>
                     ),
-                    // Hidden fields for clean export
+                    // Hidden fields for export
                     _marginValue: margin,
                     _statusText: status
                 };
@@ -77,38 +131,21 @@ export default function Profitability() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [dateRange.start, dateRange.end]);
 
     useEffect(() => {
-        fetchData(startDate, endDate);
-    }, [fetchData, startDate, endDate]);
+        fetchData();
+    }, [fetchData]);
 
-    const handleDateFilterChange = (filterType, date) => {
-        let start, end;
-        switch (filterType) {
-            case "Weekly":
-                start = startOfWeek(date, { weekStartsOn: 1 });
-                end = endOfWeek(date, { weekStartsOn: 1 });
-                break;
-            case "Monthly":
-                start = startOfMonth(date);
-                end = endOfMonth(date);
-                break;
-            case "Yearly":
-                start = startOfYear(date);
-                end = endOfYear(date);
-                break;
-            case "Daily":
-            default:
-                start = date;
-                end = date;
-                break;
-        }
-        setStartDate(format(start, 'yyyy-MM-dd'));
-        setEndDate(format(end, 'yyyy-MM-dd'));
+    // --- 4. HANDLER ---
+    const handleFilterChange = (newFilter, newDate) => {
+        console.log("1. Parent received change:", newFilter, newDate);
+        setActiveFilter(newFilter);
+        setActiveDate(newDate);
     };
 
-    if (loading) {
+    // --- RENDER ---
+    if (loading && profitData.length === 0) {
         return (
             <div className="default-container flex flex-col items-center justify-center h-96">
                 <Loader2 className="w-8 h-8 animate-spin text-navyBlue mb-4" />
@@ -123,8 +160,7 @@ export default function Profitability() {
     const averageMargin = profitData.length > 0 ? (totalMargin / profitData.length).toFixed(2) : 0;
     const bestMarginProduct = profitData.length > 0 ? profitData[0] : null;
 
-    // --- CLEAN EXPORT DATA ---
-    // Replace ₱ with PHP
+    // Clean Export Data
     const exportData = profitData.map(p => ({
         Rank: p.Rank,
         Product: p.Product,
@@ -137,20 +173,33 @@ export default function Profitability() {
     }));
 
     return (
-        <div className="flex flex-col space-y-5">
-            <div className="flex gap-5 justify-end">
-                <CalendarFilter onChange={handleDateFilterChange} />
-                <div>
+        <div className="flex flex-col space-y-5" ref={reportRef}>
+            
+            {/* Header / Controls */}
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                 <button onClick={fetchData} className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-navyBlue transition-colors self-start">
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} 
+                    Refresh Data
+                 </button>
+
+                <div className="flex gap-5 justify-end items-center">
+                    <CalendarFilter 
+                        activeFilter={activeFilter}
+                        activeDate={activeDate}
+                        onChange={handleFilterChange}
+                    />
+                    
                     <ExportButton
                         data={exportData}
                         columns={columns}
-                        fileName={`Profitability_Report_${startDate}_to_${endDate}`}
-                        title="Product Profitability Analysis"
+                        fileName={`Profitability_Report_${dateRange.start}_to_${dateRange.end}`}
+                        title={`Product Profitability - ${dateRange.start} to ${dateRange.end}`}
+                        domElementRef={reportRef} 
                     />
                 </div>
             </div>
 
-            {/* KPI */}
+            {/* KPIs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <KpiCard
                     bgColor="#002B50"
@@ -166,10 +215,10 @@ export default function Profitability() {
                 />
                 <KpiCard
                     bgColor="#1f781a"
-                    title="Most Profitable Item"
+                    title="Highest Margin Item"
                     icon={<DollarSign />}
                     value={bestMarginProduct ? bestMarginProduct.Product : 'N/A'}
-                    description={bestMarginProduct ? `Margin: ${bestMarginProduct._marginValue.toFixed(2)}%` : 'No data'}
+                    description={bestMarginProduct ? `${bestMarginProduct._marginValue.toFixed(2)}% Margin` : 'No data'}
                 />
             </div>
 
