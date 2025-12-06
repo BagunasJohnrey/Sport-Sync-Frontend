@@ -26,7 +26,7 @@ export default function ProfileSettings() {
 
   const password = formData.newPassword;
   const validation = {
-    length: password.length >= 6, // Backend requires min 6
+    length: password.length >= 8,
     match: password && password === formData.confirmPassword
   };
 
@@ -122,9 +122,7 @@ export default function ProfileSettings() {
                         <ShieldCheck size={14} /> Password Requirements
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
-                        <RequirementItem text="At least 6 characters" met={validation.length} />
-                        {/* Note: Backend validation only strictly checks min length: 6. 
-                            Other complexities are client-side preference unless updated in backend. */}
+                        <RequirementItem text="At least 8 characters" met={validation.length} />
                     </div>
                 </div>
 
