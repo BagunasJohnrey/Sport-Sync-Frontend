@@ -6,7 +6,7 @@ export default function CartItem({ cart, onIncrease, onDecrease, onRemove }) {
       {cart.map((item) => (
         <div
           key={item.id}
-          className="group flex flex-col gap-3 py-4 border-b border-gray-100 last:border-0"
+          className="group flex flex-col gap-3 py-1 border-b border-gray-100 last:border-0"
         >
           {/* Top Row: Name and Remove */}
           <div className="flex justify-between items-start">

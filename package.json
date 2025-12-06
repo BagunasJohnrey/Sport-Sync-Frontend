@@ -18,6 +18,7 @@
     "dom-to-image-more": "^3.7.2",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.554.0",
     "react": "^19.2.0",
     "react-apexcharts": "^1.8.0",

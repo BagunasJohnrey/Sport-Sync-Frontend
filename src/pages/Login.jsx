@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { users } from "../mockData";
+// import { users } from "../mockData"; // REMOVED
 import { useAuth } from "../context/AuthContext";
 import background from "../assets/background.png";
 import logo from "../assets/logo.png";
 import { Eye, EyeOff, User, Lock } from "lucide-react";
+import API from '../services/api'; // ADDED
 
 
 export default function Login() {
@@ -12,32 +13,39 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false); // ADDED
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => { // CHANGED TO ASYNC
     e.preventDefault();
+    setError("");
+    setLoading(true); // ADDED
 
-    const foundUser = users.find(
-      (u) => u.username === username && u.password === password
-    );
+    try {
+        const response = await API.post('/auth/login', { // CHANGED to API call
+            username,
+            password
+        });
 
-    if (!foundUser) {
-      setError("Invalid username or password.");
-      return;
+        // Backend response should look like { user: {..}, accessToken: '...' }
+        const { user: userData, accessToken } = response.data;
+
+        // Call the updated login function with accessToken
+        login(userData, accessToken);
+        
+        localStorage.setItem("role", userData.role);
+
+        navigate("/dashboard");
+
+    } catch (err) {
+        // Handle API errors (e.g., 401 unauthorized)
+        const errorMessage = err.response?.data?.message || 'Login failed. Check server status.';
+        setError(errorMessage);
+    } finally {
+        setLoading(false); // ADDED
     }
-
-    if (foundUser.status !== "Active") {
-      setError("Your account is inactive.");
-      return;
-    }
-
-    login(foundUser);
-
-    localStorage.setItem("role", foundUser.role);
-
-    navigate("/dashboard");
   };
 
   return (
@@ -124,12 +132,14 @@ export default function Login() {
           {/* Submit */}
           <button
             type="submit"
+            disabled={loading} // ADDED
             className="
           w-full bg-deepBlue text-softWhite py-3 rounded-lg font-button
           hover:bg-navyBlue transition
+          disabled:opacity-50 // ADDED
         "
           >
-            Login
+            {loading ? 'Logging In...' : 'Login'} {/* ADDED */}
           </button>
         </form>
       </div>

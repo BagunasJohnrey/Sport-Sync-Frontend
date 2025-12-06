@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "../components/Layout";
 import Table from "../components/Table";
 import KpiCard from "../components/KpiCard";
@@ -6,146 +6,331 @@ import Filter from "../components/Filter";
 import Scanner from "../components/Scanner.jsx";
 import EditProductModal from "../components/inventory/EditProductModal.jsx";
 import AlertModal from "../components/inventory/AlertModal.jsx";
-// Import Toast Component
-import Toast from "../components/Toast"; 
-import { categories, products } from "../mockData"; 
+import Toast from "../components/Toast";
 import { useAuth } from "../context/AuthContext";
-import { getCategoryMap } from "../utils/Utils.js";
+import API from "../services/api";
 import {
   Package,
   AlertTriangle,
   TrendingDown,
-  DollarSign,
+  AlertOctagon,
   Trash2,
   Edit,
   PlusCircle,
   X,
+  Loader2,
+  Archive,
+  RefreshCw, 
 } from "lucide-react";
+
+const getCategoryMap = (categories) => {
+  return (categories || []).reduce((acc, cat) => {
+    acc[cat.category_id] = cat.category_name;
+    return acc;
+  }, {});
+};
+
+// Columns
+const columns = [
+  { header: "Product", accessor: "Product" },
+  { header: "Category", accessor: "Category" },
+  { header: "Cost Price", accessor: "Cost Price" },
+  { header: "Selling Price", accessor: "Selling Price" },
+  { header: "Stock", accessor: "Stock" },
+  { header: "Stock Status", accessor: "StockStatus" },
+  { header: "Status", accessor: "ProductStatus" },
+  { header: "Actions", accessor: "Actions" },
+];
 
 export default function Inventory() {
   const { user } = useAuth();
-  const categoryMap = getCategoryMap(categories);
 
-  const [isAlertOpen, setIsAlertOpen] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [inventoryKpis, setInventoryKpis] = useState(null);
+
+  const [globalSettings, setGlobalSettings] = useState({
+    stock_threshold_low: 20,
+    stock_threshold_critical: 10,
+  });
+
+  const [isFetching, setIsFetching] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  
-  // NEW: Toast State
   const [toast, setToast] = useState(null);
 
-  // Form state
+  const [hasAlertBeenShown, setHasAlertBeenShown] = useState(false);
+
   const [formData, setFormData] = useState({
     productName: "",
     category: "",
-    description: "",
     sellingPrice: "0.00",
     costPrice: "0.00",
     initialStock: "0",
     reorderPoint: "10",
-    supplier: "",
     barcode: "",
   });
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedStockLevel, setSelectedStockLevel] = useState("all");
-
-  const handleScan = (scannedBarcode) => {
-    const existingProduct = products.find((p) => p.barcode === scannedBarcode);
-
-    if (existingProduct) {
-      setFormData({
-        productName: existingProduct.product_name,
-        category: String(existingProduct.category_id),
-        description: "", 
-        sellingPrice: existingProduct.selling_price,
-        costPrice: existingProduct.cost_price,
-        initialStock: existingProduct.quantity,
-        reorderPoint: "10",
-        supplier: "",
-        barcode: existingProduct.barcode,
-      });
-    } else {
-      setFormData({
-        productName: "",
-        category: "",
-        description: "",
-        sellingPrice: "0.00",
-        costPrice: "0.00",
-        initialStock: "0",
-        reorderPoint: "10",
-        supplier: "",
-        barcode: scannedBarcode,
-      });
-    }
-    setIsModalOpen(true);
-  };
-
-  const lowStockList = products
-    .filter((p) => p.quantity > 0 && p.quantity <= 10)
-    .map((p) => ({
-      name: p.product_name,
-      sku: p.barcode,
-      current: p.quantity,
-      minimum: 10,
-      unit: "pcs",
-    }));
+  // 1. UPDATED: Default to "active"
+  const [selectedStockLevel, setSelectedStockLevel] = useState("active");
 
   useEffect(() => {
-    if (lowStockList.length > 0) {
-      setIsAlertOpen(true);
-    }
+    const fetchSettings = async () => {
+      try {
+        const response = await API.get("/settings");
+        const settings = response.data.data || {};
+        setGlobalSettings({
+          stock_threshold_low: parseInt(settings.stock_threshold_low) || 20,
+          stock_threshold_critical:
+            parseInt(settings.stock_threshold_critical) || 10,
+        });
+      } catch (error) {
+        console.error("Failed to fetch global settings:", error);
+      }
+    };
+
+    fetchSettings();
   }, []);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch = product.product_name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase()) || 
-      product.barcode.includes(searchQuery);
+  // FETCH DATA FUNCTION
+  const fetchData = useCallback(async () => {
+    setIsFetching(true);
+    let fetchedReport = null;
 
-    const matchesCategory =
-      selectedCategory === "all" ||
-      String(product.category_id) === selectedCategory;
+    try {
+      // 1. Fetch Categories
+      if (categories.length === 0) {
+        const catResponse = await API.get("/categories");
+        setCategories(catResponse.data.data || []);
+      }
 
-    let matchesStockLevel = true;
-    if (selectedStockLevel === "in-stock")
-      matchesStockLevel = product.quantity > 0;
-    else if (selectedStockLevel === "low-stock")
-      matchesStockLevel = product.quantity > 0 && product.quantity <= 10;
-    else if (selectedStockLevel === "out-of-stock")
-      matchesStockLevel = product.quantity === 0;
+      // 2. Fetch Inventory Report/KPIs
+      const reportResponse = await API.get("/reports/inventory");
+      fetchedReport = reportResponse.data.data || {};
+      setInventoryKpis(fetchedReport.summary);
 
-    return matchesSearch && matchesCategory && matchesStockLevel;
-  });
+      // 3. DETERMINE STATUS BASED ON FILTER
+      const statusParam = selectedStockLevel === "archived" ? "Archived" : "Active";
 
-  const totalProducts = products.length;
-  const lowStockItems = products.filter(
-    (p) => p.quantity > 0 && p.quantity <= 10
-  ).length;
-  const outOfStockItems = products.filter((p) => p.quantity === 0).length;
-  const inventoryValue = products.reduce(
-    (sum, p) => sum + parseFloat(p.cost_price) * p.quantity,
-    0
-  );
+      // 4. Fetch Products
+      const fetchParams = {
+        limit: 1000,
+        search: searchQuery,
+        category_id: selectedCategory === "all" ? undefined : selectedCategory,
+        status: statusParam, 
+      };
 
-  const columns = [
-    { header: "Product", accessor: "Product" },
-    { header: "Category", accessor: "Category" },
-    { header: "Cost Price", accessor: "Cost Price" },
-    { header: "Selling Price", accessor: "Selling Price" },
-    { header: "Stock", accessor: "Stock" },
-    { header: "Status", accessor: "Status" },
-    { header: "Actions", accessor: "Actions" },
-  ];
+      const prodResponse = await API.get("/products", { params: fetchParams });
+      const fetchedProducts = prodResponse.data.data || [];
+
+      // Logic for Stock Level Filtering (Client-side)
+      let finalProducts = fetchedProducts;
+
+      const criticalThreshold = globalSettings.stock_threshold_critical;
+      const lowThreshold = globalSettings.stock_threshold_low;
+
+      // Only filter by stock levels if one of the specific stock filters is selected
+      // "active" and "archived" show all products with that status
+      if (
+        [
+          "in-stock",
+          "low-stock",
+          "critical",
+          "out-of-stock",
+        ].includes(selectedStockLevel)
+      ) {
+        finalProducts = finalProducts.filter((p) => {
+          switch (selectedStockLevel) {
+            case "out-of-stock":
+              return p.quantity === 0;
+            case "critical":
+              return p.quantity > 0 && p.quantity <= criticalThreshold;
+            case "low-stock":
+              return (
+                p.quantity > criticalThreshold && p.quantity <= lowThreshold
+              );
+            case "in-stock":
+              return p.quantity > lowThreshold;
+            default:
+              return true;
+          }
+        });
+      }
+
+      setProducts(finalProducts);
+
+      const hasIssues = fetchedProducts.some(
+        (p) => p.status === "Active" && p.quantity <= lowThreshold
+      );
+
+      if (hasIssues && !hasAlertBeenShown) {
+        setIsAlertOpen(true);
+        setHasAlertBeenShown(true);
+      }
+    } catch (error) {
+      console.error(
+        "Failed to fetch inventory data:",
+        error.response?.data || error
+      );
+      setProducts([]);
+      setInventoryKpis(null);
+      setToast({
+        message: "Failed to load inventory data. Check server connection.",
+        type: "error",
+      });
+    } finally {
+      setIsFetching(false);
+      setIsInitialLoading(false);
+    }
+  }, [
+    searchQuery,
+    selectedCategory,
+    selectedStockLevel, 
+    hasAlertBeenShown,
+    categories.length,
+    globalSettings,
+  ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // --- HANDLERS ---
+
+  const handleScan = (scannedBarcode) => {
+    API.get(`/products/barcode/${scannedBarcode}`)
+      .then((response) => {
+        const existingProduct = response.data.data;
+        setSelectedProduct(existingProduct);
+        setIsEditModalOpen(true);
+        setIsModalOpen(false);
+        setToast({
+          message: `Product "${existingProduct.product_name}" found!`,
+          type: "success",
+        });
+      })
+      .catch(() => {
+        setFormData({
+          productName: "",
+          category: "",
+          sellingPrice: "0.00",
+          costPrice: "0.00",
+          initialStock: "0",
+          reorderPoint: "10",
+          barcode: scannedBarcode,
+        });
+
+        setIsModalOpen(true);
+        setIsEditModalOpen(false);
+
+        setToast({
+          message: `Barcode ${scannedBarcode} not found. Ready to add.`,
+          type: "info",
+        });
+      });
+  };
 
   const handleEditClick = (product) => {
     setSelectedProduct(product);
     setIsEditModalOpen(true);
   };
 
-  const handleSaveProduct = (updatedProduct) => {
-    console.log("Saving:", updatedProduct);
+  const handleDelete = async (product) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to delete "${product.product_name}"?`
+      )
+    )
+      return;
+
+    try {
+      const response = await API.delete(`/products/${product.product_id}`);
+      setToast({ message: response.data.message, type: "success" });
+      fetchData();
+    } catch (error) {
+      const msg = error.response?.data?.message || "Failed to delete product.";
+      if (
+        error.response?.status === 400 &&
+        msg.toLowerCase().includes("transaction history")
+      ) {
+        if (
+          window.confirm(
+            "This product cannot be deleted because it has sales history. Do you want to ARCHIVE (Deactivate) it instead?"
+          )
+        ) {
+          try {
+            await API.put(`/products/${product.product_id}`, {
+              status: "Archived",
+            });
+            setToast({
+              message: "Product archived successfully.",
+              type: "success",
+            });
+            fetchData();
+          } catch (archiveErr) {
+            setToast({ message: "Failed to archive product.", type: "error" });
+          }
+        }
+      } else {
+        setToast({ message: msg, type: "error" });
+      }
+    }
+  };
+
+  const handleRestore = async (product) => {
+    if (
+      !window.confirm(`Restore "${product.product_name}" to active inventory?`)
+    )
+      return;
+    try {
+      await API.put(`/products/${product.product_id}`, { status: "Active" });
+      setToast({ message: "Product restored successfully!", type: "success" });
+      fetchData();
+    } catch (error) {
+      setToast({ message: "Failed to restore product.", type: "error" });
+    }
+  };
+
+  const handleSaveProduct = async (updatedProduct) => {
+    const productId = updatedProduct.product_id;
+    const oldProduct = products.find((p) => p.product_id === productId);
+
+    try {
+      const reorderLevelRaw =
+        updatedProduct.reorder_level ??
+        updatedProduct.reorder_point ??
+        updatedProduct.reorderPoint ??
+        updatedProduct.reorderLevel;
+      const productDetailsPayload = {
+        product_name: updatedProduct.product_name,
+        category_id: parseInt(updatedProduct.category_id),
+        selling_price: parseFloat(updatedProduct.selling_price),
+        cost_price: parseFloat(updatedProduct.cost_price),
+        reorder_level: parseInt(reorderLevelRaw || 0),
+      };
+
+      await API.put(`/products/${productId}`, productDetailsPayload);
+
+      if (oldProduct && oldProduct.quantity !== updatedProduct.quantity) {
+        const stockPayload = {
+          quantity: updatedProduct.quantity,
+          change_type: "Manual Adjustment",
+        };
+        await API.patch(`/products/${productId}/stock`, stockPayload);
+      }
+
+      setToast({ message: "Product updated successfully!", type: "success" });
+      fetchData();
+    } catch (error) {
+      const msg = error.response?.data?.message || "Failed to update product.";
+      setToast({ message: msg, type: "error" });
+    }
   };
 
   const handleInputChange = (e) => {
@@ -153,79 +338,194 @@ export default function Inventory() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // --- UPDATED SUBMIT LOGIC ---
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Simple Validation
-    if (!formData.productName || !formData.category || !formData.sellingPrice) {
-      setToast({ message: "Please fill in all required fields.", type: "error" });
-      return; // Stop function if validation fails
+    if (
+      !formData.productName ||
+      !formData.category ||
+      !formData.sellingPrice ||
+      !formData.barcode
+    ) {
+      setToast({
+        message: "Please fill in all required fields.",
+        type: "error",
+      });
+      return;
     }
 
     try {
-      // Simulate API call or data saving
-      console.log("Form submitted:", formData);
-      
-      // Success Feedback
-      setToast({ message: "Product added successfully!", type: "success" });
-      setIsModalOpen(false); // Close Modal on success
+      const payload = {
+        barcode: formData.barcode,
+        product_name: formData.productName,
+        category_id: parseInt(formData.category),
+        cost_price: parseFloat(formData.costPrice),
+        selling_price: parseFloat(formData.sellingPrice),
+        quantity: parseInt(formData.initialStock),
+        reorder_level: parseInt(formData.reorderPoint),
+      };
+
+      const response = await API.post("/products", payload);
+      setToast({ message: response.data.message, type: "success" });
+      fetchData();
+      setIsModalOpen(false);
     } catch (error) {
-      // Fail Feedback
-      setToast({ message: "Failed to add product.", type: "error" });
+      const msg = error.response?.data?.message || "Failed to add product.";
+      setToast({ message: msg, type: "error" });
     }
   };
 
-  const data = filteredProducts.map((p) => ({
-    id: p.id,
-    Product: p.product_name,
-    Category: categoryMap[p.category_id],
-    "Cost Price": `₱${parseFloat(p.cost_price).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-    })}`,
-    "Selling Price": `₱${parseFloat(p.selling_price).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-    })}`,
-    Stock: (
-      <span
-        className={
-          p.quantity === 0
-            ? "text-red-500 font-bold"
-            : "text-emerald-600 font-bold"
-        }
-      >
-        {p.quantity}
-      </span>
-    ),
-    Status:
-      p.quantity === 0 ? (
+  const categoryMap = getCategoryMap(categories);
+
+  const alertList = products
+    .filter(
+      (p) =>
+        p.status === "Active" &&
+        p.quantity <= globalSettings.stock_threshold_low
+    )
+    .map((p) => {
+      let status = "low";
+      if (p.quantity === 0) status = "out_of_stock";
+      else if (p.quantity <= globalSettings.stock_threshold_critical)
+        status = "critical";
+
+      return {
+        name: p.product_name,
+        sku: p.barcode,
+        current: p.quantity,
+        minimum: p.reorder_level,
+        status: status,
+        unit: "units",
+      };
+    })
+    .sort((a, b) => {
+      const priority = { out_of_stock: 0, critical: 1, low: 2 };
+      return priority[a.status] - priority[b.status];
+    });
+
+  const data = products.map((p) => {
+    const isArchived = p.status === "Archived" || p.status === "Inactive";
+
+    let statusBadge;
+    const criticalThreshold = globalSettings.stock_threshold_critical;
+    const lowThreshold = globalSettings.stock_threshold_low;
+
+    if (isArchived) {
+      statusBadge = (
+        <span className="text-gray-400 font-medium text-xs">
+          -
+        </span>
+      );
+    } else if (p.quantity === 0) {
+      statusBadge = (
         <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-xs font-bold uppercase">
           Out of Stock
         </span>
-      ) : (
+      );
+    } else if (p.quantity > 0 && p.quantity <= criticalThreshold) {
+      statusBadge = (
+        <span className="bg-red-50 text-red-700 px-2 py-1 rounded text-xs font-bold uppercase border border-red-200">
+          Critical
+        </span>
+      );
+    } else if (p.quantity > criticalThreshold && p.quantity <= lowThreshold) {
+      statusBadge = (
+        <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded text-xs font-bold uppercase">
+          Low Stock
+        </span>
+      );
+    } else {
+      statusBadge = (
         <span className="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-xs font-bold uppercase">
           In Stock
         </span>
-      ),
-    Actions:
-      user.role === "Admin" || user.role === "Staff" ? (
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleEditClick(p)}
-            className="p-1.5 text-slate-500 hover:text-navyBlue bg-slate-100 hover:bg-blue-50 rounded transition-colors"
-          >
-            <Edit size={16} />
-          </button>
-          <button
-            onClick={() => console.log("Delete", p)}
-            className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      ) : null,
-  }));
+      );
+    }
 
+    const productStatusBadge = (
+        <span
+          className={`px-2 py-1 rounded text-xs font-bold uppercase border ${
+            isArchived
+              ? "bg-gray-100 text-gray-500 border-gray-200"
+              : "bg-blue-50 text-blue-600 border-blue-100"
+          }`}
+        >
+          {p.status || 'Active'}
+        </span>
+    );
+
+    return {
+      id: p.product_id,
+      Product: (
+        <div
+          className={`flex items-center gap-2 ${
+            isArchived ? "text-gray-400 italic" : "text-gray-900"
+          }`}
+        >
+          {isArchived && <Archive size={14} />}
+          {p.product_name}
+        </div>
+      ),
+      Category: categoryMap[p.category_id] || "N/A",
+      "Cost Price": `₱${parseFloat(p.cost_price || 0).toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+      })}`,
+      "Selling Price": `₱${parseFloat(p.selling_price || 0).toLocaleString(
+        "en-PH",
+        { minimumFractionDigits: 2 }
+      )}`,
+      Stock: (
+        <span
+          className={
+            isArchived
+              ? "text-gray-400"
+              : p.quantity === 0
+              ? "text-red-500 font-bold"
+              : "text-emerald-600 font-bold"
+          }
+        >
+          {p.quantity}
+        </span>
+      ),
+      StockStatus: statusBadge,
+      ProductStatus: productStatusBadge,
+      Actions: (
+        <div className="flex gap-2">
+          {!isArchived &&
+            (user?.role === "Admin" || user?.role === "Staff") && (
+              <button
+                onClick={() => handleEditClick(p)}
+                className="p-1.5 text-slate-500 hover:text-navyBlue bg-slate-100 hover:bg-blue-50 rounded transition-colors"
+                title="Edit Product"
+              >
+                <Edit size={16} />
+              </button>
+            )}
+          
+          {isArchived && (user?.role === "Admin" || user?.role === "Staff") && (
+            <button
+              onClick={() => handleRestore(p)}
+              className="p-1.5 text-slate-500 hover:text-emerald-600 bg-slate-100 hover:bg-emerald-50 rounded transition-colors"
+              title="Reactivate Product"
+            >
+              <RefreshCw size={16} />
+            </button>
+          )}
+
+          {user?.role === "Admin" && (
+            <button
+              onClick={() => handleDelete(p)}
+              className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded transition-colors"
+              title={isArchived ? "Permanently Delete" : "Archive Product"}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+      ),
+    };
+  });
+
+  // 2. UPDATED FILTER CONFIG: Merged active/archived into stock level filter
   const filterConfig = [
     {
       id: "selectedCategory",
@@ -234,7 +534,7 @@ export default function Inventory() {
       options: [
         { value: "all", label: "All Categories" },
         ...categories.map((cat) => ({
-          value: String(cat.id), 
+          value: String(cat.category_id),
           label: cat.category_name,
         })),
       ],
@@ -244,18 +544,88 @@ export default function Inventory() {
       value: selectedStockLevel,
       onChange: (e) => setSelectedStockLevel(e.target.value),
       options: [
-        { value: "all", label: "All Stock Levels" },
+        { value: "active", label: "All Active Products" },
         { value: "in-stock", label: "In Stock" },
         { value: "low-stock", label: "Low Stock" },
+        { value: "critical", label: "Critical Stock" },
         { value: "out-of-stock", label: "Out of Stock" },
+        { value: "archived", label: "Archived Products" },
       ],
     },
   ];
 
+  const renderMainContent = () => {
+    if (isInitialLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[70vh] bg-white rounded-xl shadow-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-navyBlue" />
+          <p className="text-slate-500 mt-4">
+            Initializing application data...
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            bgColor="#002B50"
+            title="Total Products"
+            icon={<Package />}
+            value={inventoryKpis?.total_products || 0}
+          />
+          <KpiCard
+            bgColor="#F39C12"
+            title="Low Stock"
+            icon={<TrendingDown />}
+            value={inventoryKpis?.low_stock_count || 0}
+          />
+          <KpiCard
+            bgColor="#D32F2F"
+            title="Critical Stock"
+            icon={<AlertOctagon />}
+            value={inventoryKpis?.critical_stock_count || 0}
+          />
+          <KpiCard
+            bgColor="#E74C3C"
+            title="Out of Stock"
+            icon={<AlertTriangle />}
+            value={inventoryKpis?.out_of_stock_count || 0}
+          />
+        </div>
+
+        <Filter
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Search products by name..."
+          filters={filterConfig}
+          showClearButton={
+            searchQuery ||
+            selectedCategory !== "all" ||
+            selectedStockLevel !== "active"
+          }
+          onClear={() => {
+            setSearchQuery("");
+            setSelectedCategory("all");
+            setSelectedStockLevel("active");
+          }}
+          resultsCount={`Showing ${products.length} products`}
+        />
+
+        <Table
+          columns={columns}
+          data={data}
+          rowsPerPage={10}
+        />
+      </>
+    );
+  };
+
   return (
     <Layout>
       <div className="space-y-5">
-        <div className="mb-5 flex justify-between items-start">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between">
           <div>
             <h1 className="page-title">Inventory</h1>
             <p className="page-description">
@@ -263,115 +633,62 @@ export default function Inventory() {
             </p>
           </div>
 
-          <div className="flex flex-row justify-end items-center gap-4 shrink-0 mt-15 lg:mt-0">
-            <Scanner onScan={handleScan} />
-            
-            {(user.role === "Admin" || user.role === "Staff") && (
-              <button
-                onClick={() => {
-                  setFormData({
-                    productName: "",
-                    category: "",
-                    description: "",
-                    sellingPrice: "0.00",
-                    costPrice: "0.00",
-                    initialStock: "0",
-                    reorderPoint: "10",
-                    supplier: "",
-                    barcode: "",
-                  });
-                  setIsModalOpen(true);
-                }}
-                className="text-softWhite px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-                style={{ backgroundColor: "#004B8D" }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#003366")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#004B8D")
-                }
-              >
-                <PlusCircle size={18} />
-                Add Product
-              </button>
+          <div className="flex flex-row justify-end items-center gap-4 shrink-0 mt-5 lg:mt-0">
+            {(user?.role === "Admin" || user?.role === "Staff") && (
+              <>
+                <Scanner key="main-scanner" onScan={handleScan} />
+
+                <button
+                  onClick={() => {
+                    setFormData({
+                      productName: "",
+                      category: "",
+                      sellingPrice: "0.00",
+                      costPrice: "0.00",
+                      initialStock: "0",
+                      reorderPoint: "20",
+                      barcode: "",
+                    });
+                    setIsModalOpen(true);
+                  }}
+                  className="text-softWhite  px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  style={{ backgroundColor: "#004B8D" }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#003366")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#004B8D")
+                  }
+                >
+                  <PlusCircle size={18} />
+                  Add Product
+                </button>
+              </>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            bgColor="#002B50"
-            title="Total Products"
-            icon={<Package />}
-            value={totalProducts}
-          />
-          <KpiCard
-            bgColor="#F39C12"
-            title="Low Stock"
-            icon={<AlertTriangle />}
-            value={lowStockItems}
-          />
-          <KpiCard
-            bgColor="#E74C3C"
-            title="Out of Stock"
-            icon={<TrendingDown />}
-            value={outOfStockItems}
-          />
-          <KpiCard
-            bgColor="#1f781a"
-            title="Inventory Value"
-            icon={<DollarSign />}
-            value={`₱${inventoryValue.toLocaleString("en-PH", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`}
-          />
-        </div>
-
-        <Filter
-          searchQuery={searchQuery}
-          onSearchChange={(e) => setSearchQuery(e.target.value)}
-          searchPlaceholder="Search products by name..."
-          filters={filterConfig}
-          showClearButton={
-            searchQuery ||
-            selectedCategory !== "all" ||
-            selectedStockLevel !== "all"
-          }
-          onClear={() => {
-            setSearchQuery("");
-            setSelectedCategory("all");
-            setSelectedStockLevel("all");
-          }}
-          resultsCount={`Showing ${filteredProducts.length} products`}
-        />
-
-        <Table
-          tableName="All Products Inventory"
-          columns={columns}
-          data={data}
-          rowsPerPage={10}
-        />
+        {renderMainContent()}
       </div>
 
       {isModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setIsModalOpen(false)}
         >
-          <div 
+          <div
             className="bg-softWhite rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto hide-scrollbar"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-navyBlue flex items-center justify-between p-6 border-b">
               <div>
                 <h2 className="text-xl font-semibold text-gray-200">
-                  {products.find(p => p.barcode === formData.barcode) 
-                    ? "Product Details" 
+                  {products.find((p) => p.barcode === formData.barcode)
+                    ? "Product Details"
                     : "Add New Sports Product"}
                 </h2>
                 <p className="text-sm text-gray-200 mt-1">
-                  {products.find(p => p.barcode === formData.barcode)
+                  {products.find((p) => p.barcode === formData.barcode)
                     ? "View or replicate existing product details."
                     : "Fill in the details below to add a new item."}
                 </p>
@@ -384,7 +701,7 @@ export default function Inventory() {
               </button>
             </div>
 
-            <div className="p-6">
+            <form onSubmit={handleSubmit} className="p-6">
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -398,6 +715,7 @@ export default function Inventory() {
                       onChange={handleInputChange}
                       placeholder="Product name"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                      required
                     />
                   </div>
                   <div>
@@ -409,10 +727,11 @@ export default function Inventory() {
                       value={formData.category}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                      required
                     >
                       <option value="">Select category</option>
                       {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
+                        <option key={cat.category_id} value={cat.category_id}>
                           {cat.category_name}
                         </option>
                       ))}
@@ -433,6 +752,7 @@ export default function Inventory() {
                       placeholder="0.00"
                       step="0.01"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-navyBlue focus:border-transparent bg-gray-50"
+                      required
                     />
                   </div>
                   <div>
@@ -482,46 +802,46 @@ export default function Inventory() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Barcode
+                    Barcode <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     name="barcode"
                     value={formData.barcode}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-200 text-gray-500 cursor-not-allowed focus:outline-none"
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                    required
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="p-6">
-              <button
-                onClick={handleSubmit}
-                className="w-full bg-navyBlue text-white py-3 rounded-lg font-medium hover:bg-green-800 transition-colors"
-              >
-                Add Product
-              </button>
-            </div>
+              <div className="p-6">
+                <button
+                  type="submit"
+                  className="w-full bg-navyBlue text-white py-3 rounded-lg font-medium hover:bg-green-800 transition-colors"
+                >
+                  Add Product
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* RENDER TOAST HERE */}
       {toast && (
-        <div className="relative z-[9999]">
-            <Toast
+        <div className="relative z-9999">
+          <Toast
             message={toast.message}
             type={toast.type}
             duration={2000}
             onClose={() => setToast(null)}
-            />
+          />
         </div>
       )}
 
       {isAlertOpen && (
         <AlertModal
-          lowStockItems={lowStockList}
+          lowStockItems={alertList}
           onClose={() => setIsAlertOpen(false)}
         />
       )}

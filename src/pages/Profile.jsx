@@ -1,11 +1,45 @@
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Layout from "../components/Layout";
-import { Settings, User, Mail, Shield, CheckCircle2, Edit2, LogOut } from "lucide-react";
+import { Settings, User, Mail, Shield, CheckCircle2, Edit2, LogOut, Loader2 } from "lucide-react"; // ADDED Loader2
+import { useState, useEffect } from "react"; // ADDED useState, useEffect
+import API from '../services/api'; // ADDED
 
 export default function Profile() {
   const { user } = useAuth(); 
   const navigate = useNavigate();
+  
+  // NEW STATE
+  const [profileData, setProfileData] = useState(user);
+  const [loading, setLoading] = useState(true);
+
+  // NEW FETCH FUNCTION
+  const fetchProfile = async () => {
+    if (!user) return;
+    try {
+      const response = await API.get('/auth/profile');
+      setProfileData(response.data.data);
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [user]); // DEPENDENCY ADDED
+
+  if (loading || !profileData) { // ADDED Loading state handler
+    return (
+        <Layout>
+            <div className="min-h-[80vh] flex flex-col items-center justify-center p-8">
+                <Loader2 className="w-8 h-8 animate-spin text-navyBlue" />
+                <p className="text-slate-500 mt-4">Loading profile...</p>
+            </div>
+        </Layout>
+    );
+  }
 
   if (!user) {
     return (
@@ -57,7 +91,7 @@ export default function Profile() {
               {/* Avatar */}
               <div className="relative mb-6">
                 <div className="w-28 h-28 rounded-full bg-linear-to-br from-navyBlue to-[#1f781a] flex items-center justify-center text-white text-3xl font-bold shadow-lg ring-4 ring-white">
-                  {user.full_name.charAt(0).toUpperCase()}
+                  {profileData.full_name.charAt(0).toUpperCase()}
                 </div>
                 <div className="absolute bottom-1 right-1 bg-white p-1 rounded-full shadow-sm">
                     {/* Online Status Indicator */}
@@ -65,23 +99,23 @@ export default function Profile() {
                 </div>
               </div>
 
-              <h2 className="text-xl font-bold text-slate-800 mb-1">{user.full_name}</h2>
-              <p className="text-slate-500 text-sm font-medium mb-6">@{user.username}</p>
+              <h2 className="text-xl font-bold text-slate-800 mb-1">{profileData.full_name}</h2>
+              <p className="text-slate-500 text-sm font-medium mb-6">@{profileData.username}</p>
 
               {/* Status Pill */}
               <div className={`
                 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold mb-8
-                ${user.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-600'}
+                ${profileData.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-600'}
               `}>
-                <CheckCircle2 size={14} className={user.status === 'Active' ? 'text-emerald-600' : 'text-slate-500'} />
-                <span className="capitalize">{user.status}</span>
+                <CheckCircle2 size={14} className={profileData.status === 'Active' ? 'text-emerald-600' : 'text-slate-500'} />
+                <span className="capitalize">{profileData.status}</span>
               </div>
 
               {/* Quick Stats or Info (Optional) */}
               <div className="w-full grid grid-cols-2 gap-4 pt-6 border-t border-slate-100">
                 <div className="text-center">
                     <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Role</span>
-                    <span className="text-slate-800 font-semibold capitalize">{user.role}</span>
+                    <span className="text-slate-800 font-semibold capitalize">{profileData.role}</span>
                 </div>
                 <div className="text-center border-l border-slate-100">
                     <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider">Joined</span>
@@ -103,9 +137,9 @@ export default function Profile() {
                 <h3 className="font-semibold text-slate-800">Personal Information</h3>
               </div>
               <div className="p-6 space-y-1">
-                <InfoRow label="Full Name" value={user.full_name} />
+                <InfoRow label="Full Name" value={profileData.full_name} />
                 <div className="border-b border-slate-50 my-2"></div>
-                <InfoRow label="Username" value={user.username} />
+                <InfoRow label="Username" value={profileData.username} />
                 <div className="border-b border-slate-50 my-2"></div>
                 
               </div>
@@ -122,13 +156,13 @@ export default function Profile() {
               <div className="p-6 space-y-1">
                 <InfoRow 
                     label="Email Address" 
-                    value={user.email} 
+                    value={profileData.email} 
                     icon={<Mail size={14} className="text-slate-400 mr-2 inline" />} 
                 />
                 <div className="border-b border-slate-50 my-2"></div>
-                <InfoRow label="Role Access" value={user.role} capitalize />
+                <InfoRow label="Role Access" value={profileData.role} capitalize />
                 <div className="border-b border-slate-50 my-2"></div>
-                <InfoRow label="Account Status" value={user.status} capitalize color="text-emerald-600" />
+                <InfoRow label="Account Status" value={profileData.status} capitalize color="text-emerald-600" />
               </div>
             </div>
 

@@ -16,7 +16,7 @@ export default function Reports() {
       <div className="mb-5">
         <h1 className="page-title">Reports and Analytics</h1>
         <p className="text-gray-600">
-          Generate comprehensive business reports with enhanced analytics
+          Generated comprehensive business reports with enhanced analytics
         </p>
       </div>
 

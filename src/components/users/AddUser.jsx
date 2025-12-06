@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
-import { Plus, X, Users } from 'lucide-react';
-// 1. Import the Toast component
-import Toast from '../components/Toast'; 
+import { Plus, X, Users, Loader2 } from 'lucide-react';
+import API from '../../services/api';
 
-export default function UserManagementHeader() {
+export default function UserManagementHeader({ onUserAdded, setToast }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
-  
-  // 2. Add Toast State
-  const [toast, setToast] = useState(null);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -25,27 +21,29 @@ export default function UserManagementHeader() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // 3. Simple Validation & Toast Logic
-    if (!formData.fullName || !formData.username || !formData.password) {
-        setToast({ message: "Please fill in all required fields.", type: "error" });
-        return;
-    }
+    setIsSubmitting(true);
+
+    const payload = {
+        full_name: formData.fullName,
+        email: formData.email,
+        username: formData.username,
+        password: formData.password,
+        role: formData.role // Role must be 'Admin', 'Staff', or 'Cashier'
+    };
 
     try {
-        // Simulate API Success
-        console.log('Creating user:', { ...formData, active: isActive });
-        setToast({ message: "User created successfully!", type: "success" });
-        
-        // Reset form (Optional)
-        setFormData({ fullName: '', email: '', username: '', password: '', role: 'Cashier' });
-        
-        // Close modal
+        const response = await API.post('/auth/register', payload); // Use the protected register endpoint
+        setToast({ message: response.data.message, type: "success" });
+        onUserAdded(); // Callback to refresh the user list in parent
         setIsModalOpen(false);
+        setFormData({ fullName: '', email: '', username: '', password: '', role: 'Cashier' });
     } catch (error) {
-        setToast({ message: "Failed to create user.", type: "error" });
+        const msg = error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || 'Failed to create user.';
+        setToast({ message: msg, type: "error" });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -63,16 +61,8 @@ export default function UserManagementHeader() {
 
       {/* Modal Overlay */}
       {isModalOpen && (
-        <div 
-            // 4. Click Outside Logic: Close modal when clicking the backdrop
-            onClick={() => setIsModalOpen(false)}
-            className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-60 flex items-center justify-center z-50 p-4"
-        >
-          <div 
-            // 5. Stop Propagation: Prevent clicks inside the modal from closing it
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar"
-          >
+        <div className="fixed inset-0 bg-charcoalBlack/40 bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 bg-navyBlue">
               <div>
@@ -170,15 +160,15 @@ export default function UserManagementHeader() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 border-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all appearance-none bg-slate-50 cursor-pointer"
                   >
-                    <option value="Cashier">Admin</option>
-                    <option value="Admin">Staff</option>
-                    <option value="Staff">Cashier</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Cashier">Cashier</option>
                   </select>
                   <Users className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-700 pointer-events-none" />
                 </div>
               </div>
 
-              {/* Active User Toggle */}
+              {/* Active User Toggle (NOTE: Status must be Active/Inactive string in the backend) */}
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -201,24 +191,13 @@ export default function UserManagementHeader() {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-darkGreen text-white py-3 rounded-lg font-semibold hover:bg-navyBlue shadow-lg transition-all duration-200"
+                disabled={isSubmitting}
+                className="w-full bg-darkGreen text-white py-3 rounded-lg font-semibold hover:bg-navyBlue shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                Create User
+                {isSubmitting ? (<><Loader2 className="w-4 h-4 animate-spin" /> Creating...</>) : 'Create User'}
               </button>
             </form>
           </div>
-        </div>
-      )}
-
-      {/* 6. Render Toast */}
-      {toast && (
-        <div className="fixed z-[9999] top-5 right-5">
-            <Toast
-            message={toast.message}
-            type={toast.type}
-            duration={3000}
-            onClose={() => setToast(null)}
-            />
         </div>
       )}
     </>

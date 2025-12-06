@@ -1,157 +1,205 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Trash2, X, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Bell, Trash2, X, CheckCircle, Loader2 } from 'lucide-react';
+import API from '../services/api';
 
-export default function NotificationPanel({ onClose }) {
-  const [isOpen, setIsOpen] = useState(true);
+export default function Notification() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  
+  // Refs for positioning
+  const buttonRef = useRef(null);
+  const dropdownRef = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: 'warning', title: 'Low Stock Alert', message: 'Coca Cola has only 5 units remaining', time: 'Just now', read: false },
-    { id: 2, type: 'info', title: 'System Update', message: 'System maintenance scheduled for tonight', time: '1h ago', read: false },
-    { id: 3, type: 'success', title: 'Order Completed', message: 'Order #12345 has been successfully processed', time: '2h ago', read: true }
-  ]);
+  const fetchNotifications = async () => {
+    try {
+      const response = await API.get('/notifications?limit=20');
+      const allData = response.data.data || [];
 
+      // --- LOGIC: Filter out "Cleared" notifications ---
+      const lastCleared = localStorage.getItem('notification_cleared_timestamp');
+      
+      const visibleNotifications = lastCleared 
+        ? allData.filter(n => new Date(n.created_at) > new Date(lastCleared))
+        : allData;
 
-useEffect(() => {
-  const handleOutside = (e) => {
-    if (panelRef.current && !panelRef.current.contains(e.target)) {
-      setNotifications(false);
-    }
-  };
-  document.addEventListener("mousedown", handleOutside);
-  return () => document.removeEventListener("mousedown", handleOutside);
-}, []);
+      setNotifications(visibleNotifications);
 
+      const visibleUnreadCount = visibleNotifications.filter(n => n.status === 'Unread').length;
+      setUnreadCount(visibleUnreadCount);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = (id) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-
-  const deleteNotification = (id) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
-
-  const clearAll = () => setNotifications([]);
-  const markAllAsRead = () => setNotifications(notifications.map(n => ({ ...n, read: true })));
-
-  const getIcon = (type) => {
-    switch(type) {
-      case 'warning': return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      case 'info': return <Info className="w-5 h-5 text-blue-500" />;
-      case 'success': return <CheckCircle className="w-5 h-5 text-emerald-500" />;
-      default: return <Bell className="w-5 h-5 text-slate-500" />;
+    } catch (error) {
+      console.error("Fetch notifications error", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getBorderColor = (type) => {
-    switch(type) {
-      case 'warning': return 'border-l-amber-500';
-      case 'info': return 'border-l-blue-500';
-      case 'success': return 'border-l-emerald-500';
-      default: return 'border-l-slate-500';
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Handle Click Outside & Positioning
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        isOpen &&
+        buttonRef.current && !buttonRef.current.contains(event.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    const updatePosition = () => {
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + 8, 
+          right: window.innerWidth - rect.right
+        });
+      }
+    };
+
+    if (isOpen) {
+      updatePosition();
+      document.addEventListener("mousedown", handleClickOutside);
+      window.addEventListener("resize", updatePosition);
+      window.addEventListener("scroll", updatePosition, true);
     }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen]);
+
+  const markAsRead = async (id, status) => {
+    if (status === 'Read') return; 
+    try {
+        await API.put(`/notifications/${id}/read`);
+        setNotifications(prev => prev.map(n => 
+            n.notification_id === id ? { ...n, status: 'Read' } : n
+        ));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (e) { console.error(e); }
   };
 
-  if (!isOpen) return null;
+  const markAllAsRead = async () => {
+    try {
+        await API.put(`/notifications/read-all`);
+        setNotifications(prev => prev.map(n => ({ ...n, status: 'Read' })));
+        setUnreadCount(0);
+    } catch (e) { console.error(e); }
+  };
+
+  // --- UPDATED: Clear Display  ---
+  const clearAllNotifications = () => {
+    localStorage.setItem('notification_cleared_timestamp', new Date().toISOString());
+    
+    // Clear local state immediately
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  // --- Simplified Icons ---
+  const getIcon = () => <Bell className="w-5 h-5 text-blue-500" />;
+  const getBorderColor = () => 'border-l-blue-500';
+
+  // Dropdown Content (Portal)
+  const dropdownContent = isOpen ? (
+    <div 
+        ref={dropdownRef}
+        style={{
+            position: 'fixed',
+            top: `${coords.top}px`,
+            right: `${coords.right}px`,
+            zIndex: 99999,
+        }}
+        className="w-80 sm:w-96 bg-softWhite rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+    >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-navyBlue text-white">
+            <h3 className="font-semibold">Notifications</h3>
+            <div className="flex gap-2">
+                <button 
+                    onClick={clearAllNotifications} 
+                    title="Clear display" 
+                    disabled={loading || notifications.length === 0}
+                    className={`p-1 rounded-full transition-colors ${loading || notifications.length === 0 ? 'text-white/50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                >
+                    <Trash2 size={18}/>
+                </button>
+                <button 
+                    onClick={markAllAsRead} 
+                    title="Mark all read" 
+                    disabled={loading || unreadCount === 0}
+                    className={`p-1 rounded-full transition-colors ${loading || unreadCount === 0 ? 'text-white/50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                >
+                    <CheckCircle size={18}/>
+                </button>
+                <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded-full transition-colors">
+                    <X size={18}/>
+                </button>
+            </div>
+        </div>
+
+        {/* List */}
+        <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+            {loading ? (
+                <div className="p-6 text-center"><Loader2 className="animate-spin mx-auto text-navyBlue"/></div>
+            ) : notifications.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">
+                    <Bell className="w-12 h-12 mx-auto mb-3 text-slate-200" />
+                    <p>No notifications</p>
+                </div>
+            ) : (
+                notifications.map(n => (
+                <div
+                    key={n.notification_id}
+                    className={`p-4 border-b border-slate-100 cursor-pointer hover:bg-slate-50 border-l-4 transition-colors ${getBorderColor()} ${n.status === 'Unread' ? 'bg-blue-50/40' : 'bg-white'}`}
+                    onClick={() => markAsRead(n.notification_id, n.status)}
+                >
+                    <div className="flex gap-3">
+                    <div className="mt-1 shrink-0">{getIcon()}</div>
+                    <div>
+                        <p className={`text-sm ${n.status === 'Unread' ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                            {n.message}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                    </div>
+                    </div>
+                </div>
+                ))
+            )}
+        </div>
+        
+    </div>
+  ) : null;
 
   return (
-    <div className="flex justify-center">
-      {/* Notification Panel */}
-      <div className="w-96 bg-softWhite rounded-xl shadow-xl border border-slate-200 overflow-hidden backdrop-blur-sm">
-
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-gradient-to-r from-slate-800 to-slate-700">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Bell className="w-5 h-5 text-white" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 border-2 border-slate-800 rounded-full"></span>
-              )}
-            </div>
-            <h3 className="font-semibold text-white">Notifications</h3>
-            {unreadCount > 0 && (
-              <span className="bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5">
-                {unreadCount}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-1">
-            {notifications.length > 0 && (
-              <button onClick={clearAll} className="p-1.5 hover:bg-slate-600 rounded-lg transition-all duration-200">
-  <Trash2 className="w-4 h-4 text-white" />
-</button>
-            )}
-            <button onClick={onClose} className="p-1.5 hover:bg-slate-600 rounded-lg transition-all duration-200">
-  <X className="w-4 h-4 text-white" />
-</button>
-          </div>
-        </div>
-
-        {/* Notifications List */}
-        <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
-            <div className="p-8 text-center text-slate-500">
-              <Bell className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-              <p className="text-slate-500 font-medium">No notifications</p>
-              <p className="text-sm text-slate-400 mt-1">You're all caught up!</p>
-            </div>
-          ) : (
-            notifications.map(notification => (
-              <div
-                key={notification.id}
-                className={`p-4 border-l-4 ${getBorderColor(notification.type)} 
-                  ${notification.read ? 'bg-white' : 'bg-blue-50'} 
-                  hover:bg-slate-50 transition-all duration-200 cursor-pointer border-b border-slate-100`}
-                onClick={() => markAsRead(notification.id)}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    {getIcon(notification.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className={`font-semibold text-sm ${notification.read ? 'text-slate-700' : 'text-slate-900'}`}>
-                        {notification.title}
-                      </h4>
-                      <span className="text-xs text-slate-500 whitespace-nowrap flex-shrink-0">
-                        {notification.time}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1 leading-relaxed">
-                      {notification.message}
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteNotification(notification.id);
-                    }}
-                    className="flex-shrink-0 p-1 hover:bg-slate-200 rounded-lg transition-all duration-200 opacity-60 hover:opacity-100"
-                  >
-                    <X className="w-4 h-4 text-slate-500" />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        {notifications.length > 0 && (
-          <div className="p-3 border-t border-slate-100 bg-slate-50">
-            <button 
-              onClick={markAllAsRead}
-              className="w-full text-sm text-slate-600 hover:text-slate-800 font-medium transition-colors duration-200 py-2 hover:bg-white rounded-lg"
-            >
-              Mark all as read
-            </button>
-          </div>
+    <>
+      <button
+        ref={buttonRef}
+        className="p-2 rounded-full hover:bg-slate-100 relative transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <Bell size={22} className="text-slate-600" />
+        {unreadCount > 0 && (
+          <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
         )}
-      </div>
-    </div>
+      </button>
+
+      {/* Render via Portal to escape parent stacking context */}
+      {createPortal(dropdownContent, document.body)}
+    </>
   );
 }

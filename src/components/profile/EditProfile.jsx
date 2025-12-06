@@ -1,23 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "../../components/Layout";
 import { Save, User, Mail, Shield, ArrowLeft, Loader2 } from "lucide-react";
 import Toast from "../../components/Toast"; 
+import API from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 export default function EditProfile() {
+  const { user, login } = useAuth(); // Get login to update context after save
   const [toast, setToast] = useState(null);
-  // NEW: Loading State
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSave = () => {
-    setIsSaving(true); // Start loading
-    
-    // Simulate API call
-    setTimeout(() => {
-        setIsSaving(false); // Stop loading
-        setToast({ message: "Profile updated successfully!", type: "success" });
-        setTimeout(() => setToast(null), 3000);
-    }, 1500); // Increased delay to show loader
+  const [formData, setFormData] = useState({
+    fullName: "",
+    username: "",
+    email: "",
+  });
+
+  // Fetch latest profile data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await API.get('/auth/profile');
+        const data = response.data.data;
+        setFormData({
+            fullName: data.full_name || "",
+            username: data.username || "",
+            email: data.email || ""
+        });
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        setToast({ message: "Failed to load profile data.", type: "error" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleInputChange = (e) => {
+      // If the input is directly an event
+      if (e.target) {
+          const { name, value } = e.target;
+          setFormData(prev => ({ ...prev, [name]: value }));
+      } 
+      // If coming from the custom InfoCard component which might send name/value directly
+      else if (e.name) {
+          setFormData(prev => ({ ...prev, [e.name]: e.value }));
+      }
   };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    try {
+        const payload = {
+            full_name: formData.fullName,
+            email: formData.email
+        };
+
+        const response = await API.put('/auth/profile', payload);
+        
+        // Update local storage/context with new data
+        if (user) {
+            // We preserve the token but update the user details
+            const token = localStorage.getItem("accessToken");
+            // Construct updated user object based on current user + response
+            const updatedUser = { ...user, ...response.data.data };
+            login(updatedUser, token);
+        }
+
+        setToast({ message: "Profile updated successfully!", type: "success" });
+
+    } catch (error) {
+        const msg = error.response?.data?.message || "Failed to update profile.";
+        setToast({ message: msg, type: "error" });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+        <Layout>
+            <div className="h-full flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-navyBlue" />
+            </div>
+        </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -45,14 +117,17 @@ export default function EditProfile() {
             fields={[
               {
                 label: "Full Name",
+                name: "fullName",
                 type: "text",
-                value: "John Doe",
+                value: formData.fullName,
+                onChange: handleInputChange,
                 placeholder: "e.g. John Doe",
               },
               {
                 label: "Username",
+                name: "username",
                 type: "text",
-                value: "johndoe",
+                value: formData.username,
                 disabled: true,
                 icon: <Shield className="w-4 h-4 text-slate-400" />,
                 note: "Username cannot be changed.",
@@ -66,8 +141,10 @@ export default function EditProfile() {
             fields={[
               {
                 label: "Email Address",
+                name: "email",
                 type: "email",
-                value: "john.doe@example.com",
+                value: formData.email,
+                onChange: handleInputChange,
                 placeholder: "e.g. john@company.com",
                 icon: <Mail className="w-4 h-4 text-slate-400" />,
               },
@@ -118,7 +195,6 @@ export default function EditProfile() {
   );
 }
 
-// ... InfoCard component remains unchanged ...
 function InfoCard({ icon, title, fields }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -142,7 +218,9 @@ function InfoCard({ icon, title, fields }) {
             <div className="relative">
               <input
                 type={field.type}
-                defaultValue={field.value} // Use defaultValue for uncontrolled inputs or value/onChange for controlled
+                name={field.name}
+                value={field.value}
+                onChange={field.onChange}
                 placeholder={field.placeholder}
                 disabled={field.disabled}
                 className={`

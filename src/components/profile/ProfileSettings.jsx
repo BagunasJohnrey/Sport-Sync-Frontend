@@ -1,7 +1,8 @@
 import Layout from "../../components/Layout";
-import { Lock, Eye, EyeOff, Save, ArrowLeft, Check, ShieldCheck, X as XIcon, Loader2 } from "lucide-react";
+import { Lock, Eye, EyeOff, Save, ArrowLeft, Check, ShieldCheck, X as XIcon, Loader2 } from "lucide-react"; 
 import { useState } from "react";
-import Toast from "../../components/Toast"; // Import Toast
+import Toast from "../../components/Toast"; 
+import API from '../../services/api'; 
 
 export default function ProfileSettings() {
   const [showCurrent, setShowCurrent] = useState(false);
@@ -26,29 +27,38 @@ export default function ProfileSettings() {
   const password = formData.newPassword;
   const validation = {
     length: password.length >= 8,
-    uppercase: /[A-Z]/.test(password),
-    number: /[0-9]/.test(password),
-    symbol: /[^A-Za-z0-9]/.test(password),
     match: password && password === formData.confirmPassword
   };
 
   const isFormValid = 
-    Object.values(validation).every(Boolean) && 
+    validation.length &&
+    validation.match &&
     formData.currentPassword.length > 0;
 
-  // Handle Save with Loading
-  const handleSave = () => {
+  // Handle Save
+  const handleSave = async () => {
     if (!isFormValid) return;
     
     setIsSaving(true);
-    
-    // Simulate API Delay
-    setTimeout(() => {
-        setIsSaving(false);
+    setToast(null);
+
+    try {
+        const passwordPayload = {
+            current_password: formData.currentPassword,
+            new_password: formData.newPassword
+        };
+        // API call to change password 
+        await API.post('/auth/change-password', passwordPayload);
+        
         setToast({ message: "Password changed successfully!", type: "success" });
         setFormData({ currentPassword: "", newPassword: "", confirmPassword: "" }); // Reset form
-        setTimeout(() => setToast(null), 3000);
-    }, 1500);
+
+    } catch (error) {
+        const msg = error.response?.data?.message || "Failed to change password.";
+        setToast({ message: msg, type: "error" });
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   return (
@@ -113,9 +123,6 @@ export default function ProfileSettings() {
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6">
                         <RequirementItem text="At least 8 characters" met={validation.length} />
-                        <RequirementItem text="1 uppercase letter" met={validation.uppercase} />
-                        <RequirementItem text="1 number" met={validation.number} />
-                        <RequirementItem text="1 symbol (!@#$)" met={validation.symbol} />
                     </div>
                 </div>
 
@@ -181,7 +188,6 @@ export default function ProfileSettings() {
   );
 }
 
-// ... RequirementItem and PasswordField components remain unchanged ...
 function RequirementItem({ text, met }) {
     return (
         <div className={`flex items-center gap-2 text-xs font-medium transition-colors duration-300 ${met ? 'text-emerald-700' : 'text-slate-400'}`}>

@@ -5,6 +5,7 @@ import logo from "../assets/logo.png";
 import {
   Home, ShoppingCart, Archive, BarChart2, Users, Settings, LogOut, ChevronLeft, ChevronRight
 } from "lucide-react";
+import API from "../services/api"; // ADDED
 
 export default function Sidebar({ onToggle }) {
   const isFirstRender = useRef(true);
@@ -23,9 +24,15 @@ export default function Sidebar({ onToggle }) {
     { title: "Settings", path: "/settings", roles: ["Admin"], icon: <Settings size={20} /> },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await API.get('/auth/logout'); 
+    } catch (error) {
+      console.error("Logout failed on server:", error);
+    } finally {
+      logout();
+      navigate("/login");
+    }
   };
 
   const toggleSidebar = () => {
@@ -103,7 +110,7 @@ export default function Sidebar({ onToggle }) {
   </div>
 )}
 
-          <button onClick={handleLogout} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 font-medium justify-start lg:${isCollapsed ? "justify-center" : "justify-start"} hover:bg-darkGreen hover:text-red-200`}>
+          <button onClick={handleLogout} className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 font-medium justify-start lg:${isCollapsed ? "justify-center" : "justify-start"} hover:bg-darkGreen `}>
             <LogOut size={20} stroke="currentColor" className="shrink-0" />
             <span className={`block lg:${isCollapsed ? "hidden" : "block"}`}>Log Out</span>
             {isCollapsed && <div className="hidden lg:block absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-50">Log Out</div>}

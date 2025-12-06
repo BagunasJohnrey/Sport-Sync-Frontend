@@ -292,12 +292,12 @@ export default function ExportButton({
               }}
               className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 transition-colors group text-left"
             >
-              <div className="p-2 bg-red-50 text-red-600 rounded-lg group-hover:bg-red-100 transition-colors">
+              <div className="p-2 bg-red-50 text-lightBlue rounded-lg group-hover:bg-red-100 transition-colors">
                 <FileText size={18} />
               </div>
               <div className="flex-1">
                 <div className="font-semibold text-slate-800">Export as PDF</div>
-                <div className="text-xs text-slate-500">Charts & Table</div>
+                <div className="text-xs text-slate-500">Table Data Only</div>
               </div>
             </button>
 
@@ -325,7 +325,7 @@ export default function ExportButton({
 
       {/* 3. Render Toast */}
       {toast && (
-        <div className="fixed z-[9999] top-5 right-5">
+        <div className="fixed z-9999 top-5 right-5">
             <Toast
             message={toast.message}
             type={toast.type}
