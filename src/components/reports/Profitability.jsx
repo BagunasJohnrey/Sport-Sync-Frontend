@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react"; 
 import KpiCard from "../../components/KpiCard";
 import Table from "../../components/Table";
 import ExportButton from "../../components/ExportButton";
@@ -35,7 +35,6 @@ const columns = [
 export default function Profitability() {
   const [profitData, setProfitData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const reportRef = useRef(null);
 
   // --- 1. CONTROLLED STATE (Single Source of Truth) ---
   // Default to "Monthly" as profitability is usually a monthly metric
@@ -106,7 +105,7 @@ export default function Profitability() {
       const processedData = rawData.map((p, index) => {
         const margin = parseFloat(p.margin_percent || 0);
         let status = "Average";
-        let statusBg = "bg-amber-500"; // Changed to Tailwind standard name
+        let statusBg = "bg-amber-500"; 
 
         if (margin >= 50) {
           status = "Excellent";
@@ -211,7 +210,7 @@ export default function Profitability() {
   }));
 
   return (
-    <div className="flex flex-col space-y-5" ref={reportRef}>
+    <div className="flex flex-col space-y-5">
       {/* Header / Controls */}
 
       <div className="flex flex-col sm:flex-row gap-3 justify-end items-center">
@@ -238,7 +237,6 @@ export default function Profitability() {
           columns={columns}
           fileName={`Profitability_Report_${dateRange.start}_to_${dateRange.end}`}
           title={`Product Profitability - ${dateRange.start} to ${dateRange.end}`}
-          domElementRef={reportRef}
         />
       </div>
 
