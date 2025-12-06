@@ -26,7 +26,7 @@ export default function Navbar({ setOpenSidebar }) {
         transition-transform duration-300
         ${visible ? "translate-y-0" : "-translate-y-full"}
         bg-softWhite shadow-sm border-b border-slate-100 flex justify-between items-center p-4
-        lg:rounded-xl lg:max-w-[calc(100%-2rem)] lg:mx-5 lg:mt-4
+        lg:rounded-xl lg:max-w-[calc(100%-2rem)] lg:mx-5
         ${window.innerWidth < 1024 ? "fixed top-0 left-0 w-full z-40" : "sticky top-4 z-30"}
       `}
     >
