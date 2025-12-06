@@ -147,7 +147,7 @@ export default function CartModal({
             {paymentMethod === "Cash" && cart.length > 0 && (
               <div className="mb-2 p-2.5 bg-white rounded-lg border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-[10px] font-bold text-navyBlue flex items-center gap-1">
+                  <label className="text-xs font-bold text-navyBlue flex items-center gap-1">
                     <Calculator size={12} />
                     Amount Receive
                   </label>
@@ -156,14 +156,14 @@ export default function CartModal({
                       <button
                         key={amt}
                         onClick={() => handleQuickAmount(amt)}
-                        className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                        className="text-xs font-bold px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
                       >
                         {amt}
                       </button>
                     ))}
                     <button
                         onClick={() => handleQuickAmount(totalAmount)}
-                        className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        className="text-xs font-bold px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                       >
                         Exact
                       </button>
@@ -185,13 +185,13 @@ export default function CartModal({
 
             {/* Totals */}
             <div className="space-y-0.5 mb-2 pt-1 border-t border-slate-200">
-                <div className="flex justify-between text-slate-600 text-[10px]">
+                <div className="flex justify-between text-slate-600 text-xs">
                     <span>Subtotal</span>
                     <span className="font-semibold">₱{totalAmount.toLocaleString()}</span>
                 </div>
                 
                 {paymentMethod === "Cash" && (
-                  <div className="flex justify-between text-emerald-600 text-xs font-bold">
+                  <div className="flex justify-between text-emerald-600 text-sm font-bold">
                       <span>Change</span>
                       <span>₱{change.toLocaleString()}</span>
                   </div>
