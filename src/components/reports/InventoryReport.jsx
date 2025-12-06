@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react"; // Removed useRef
 import KpiCard from "../../components/KpiCard";
 import Table from "../../components/Table";
 import ExportButton from "../../components/ExportButton";
-import { DollarSign, Package, AlertTriangle, AlertOctagon, TrendingDown, CheckCircle, Loader2, RefreshCw, Archive } from "lucide-react";
+import { DollarSign, Package, AlertTriangle, AlertOctagon, TrendingDown, Loader2, RefreshCw } from "lucide-react";
 import API from '../../services/api';
 
 const columns = [
@@ -23,7 +23,7 @@ const stockColumns = [
 export default function InventoryReport() {
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(false);
-    const reportRef = useRef(null); 
+    // Removed reportRef definition as it is no longer needed for snapshots
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -103,7 +103,7 @@ export default function InventoryReport() {
     const currentDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
     return (
-        <div className="flex flex-col space-y-6" ref={reportRef}>
+        <div className="flex flex-col space-y-6"> 
             
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -117,13 +117,12 @@ export default function InventoryReport() {
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />} 
                         Refresh
                     </button>
-                    
+
                     <ExportButton
                         data={exportData}
                         columns={columns}
-                        fileName={`Inventory_Snapshot_${new Date().toISOString().split('T')[0]}`}
-                        title={`Inventory Snapshot - ${currentDate}`}
-                        domElementRef={reportRef} 
+                        fileName={`Inventory_Data_${new Date().toISOString().split('T')[0]}`}
+                        title={`Inventory Report - ${currentDate}`}
                     />
                 </div>
             </div>
