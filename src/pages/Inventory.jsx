@@ -13,16 +13,15 @@ import {
   Package,
   AlertTriangle,
   TrendingDown,
-  AlertOctagon, 
+  AlertOctagon,
   Trash2,
   Edit,
   PlusCircle,
   X,
   Loader2,
   Archive,
-  RotateCcw,
+  RefreshCw, // Icon for Reactivate
 } from "lucide-react";
-
 
 const getCategoryMap = (categories) => {
   return (categories || []).reduce((acc, cat) => {
@@ -31,13 +30,15 @@ const getCategoryMap = (categories) => {
   }, {});
 };
 
+// Columns
 const columns = [
   { header: "Product", accessor: "Product" },
   { header: "Category", accessor: "Category" },
   { header: "Cost Price", accessor: "Cost Price" },
   { header: "Selling Price", accessor: "Selling Price" },
   { header: "Stock", accessor: "Stock" },
-  { header: "Status", accessor: "Status" },
+  { header: "Stock Status", accessor: "StockStatus" },
+  { header: "Status", accessor: "ProductStatus" },
   { header: "Actions", accessor: "Actions" },
 ];
 
@@ -48,7 +49,6 @@ export default function Inventory() {
   const [categories, setCategories] = useState([]);
   const [inventoryKpis, setInventoryKpis] = useState(null);
 
-  // FIX #1: Add state for global settings with defaults
   const [globalSettings, setGlobalSettings] = useState({
     stock_threshold_low: 20,
     stock_threshold_critical: 10,
@@ -77,7 +77,8 @@ export default function Inventory() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedStockLevel, setSelectedStockLevel] = useState("all");
+  // 1. UPDATED: Default to "active"
+  const [selectedStockLevel, setSelectedStockLevel] = useState("active");
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -114,23 +115,36 @@ export default function Inventory() {
       fetchedReport = reportResponse.data.data || {};
       setInventoryKpis(fetchedReport.summary);
 
-      // 3. Fetch Products
+      // 3. DETERMINE STATUS BASED ON FILTER
+      const statusParam = selectedStockLevel === "archived" ? "Archived" : "Active";
+
+      // 4. Fetch Products
       const fetchParams = {
         limit: 1000,
         search: searchQuery,
         category_id: selectedCategory === "all" ? undefined : selectedCategory,
+        status: statusParam, 
       };
 
       const prodResponse = await API.get("/products", { params: fetchParams });
       const fetchedProducts = prodResponse.data.data || [];
 
-      // FIX #2: Correct Logic for Stock Level Filtering
+      // Logic for Stock Level Filtering (Client-side)
       let finalProducts = fetchedProducts;
 
       const criticalThreshold = globalSettings.stock_threshold_critical;
       const lowThreshold = globalSettings.stock_threshold_low;
 
-      if (selectedStockLevel !== "all") {
+      // Only filter by stock levels if one of the specific stock filters is selected
+      // "active" and "archived" show all products with that status
+      if (
+        [
+          "in-stock",
+          "low-stock",
+          "critical",
+          "out-of-stock",
+        ].includes(selectedStockLevel)
+      ) {
         finalProducts = finalProducts.filter((p) => {
           switch (selectedStockLevel) {
             case "out-of-stock":
@@ -177,7 +191,7 @@ export default function Inventory() {
   }, [
     searchQuery,
     selectedCategory,
-    selectedStockLevel,
+    selectedStockLevel, // Triggers re-fetch when filter changes
     hasAlertBeenShown,
     categories.length,
     globalSettings,
@@ -252,7 +266,7 @@ export default function Inventory() {
         ) {
           try {
             await API.put(`/products/${product.product_id}`, {
-              status: "Inactive",
+              status: "Archived",
             });
             setToast({
               message: "Product archived successfully.",
@@ -378,19 +392,18 @@ export default function Inventory() {
         name: p.product_name,
         sku: p.barcode,
         current: p.quantity,
-        minimum: p.reorder_level, 
+        minimum: p.reorder_level,
         status: status,
         unit: "units",
       };
     })
     .sort((a, b) => {
-      // Sort Priority: Out of Stock > Critical > Low
       const priority = { out_of_stock: 0, critical: 1, low: 2 };
       return priority[a.status] - priority[b.status];
     });
 
   const data = products.map((p) => {
-    const isArchived = p.status === "Inactive";
+    const isArchived = p.status === "Archived" || p.status === "Inactive";
 
     let statusBadge;
     const criticalThreshold = globalSettings.stock_threshold_critical;
@@ -398,8 +411,8 @@ export default function Inventory() {
 
     if (isArchived) {
       statusBadge = (
-        <span className="bg-gray-100 text-gray-500 px-2 py-1 rounded text-xs font-bold uppercase border border-gray-200">
-          Archived
+        <span className="text-gray-400 font-medium text-xs">
+          -
         </span>
       );
     } else if (p.quantity === 0) {
@@ -427,6 +440,18 @@ export default function Inventory() {
         </span>
       );
     }
+
+    const productStatusBadge = (
+        <span
+          className={`px-2 py-1 rounded text-xs font-bold uppercase border ${
+            isArchived
+              ? "bg-gray-100 text-gray-500 border-gray-200"
+              : "bg-blue-50 text-blue-600 border-blue-100"
+          }`}
+        >
+          {p.status || 'Active'}
+        </span>
+    );
 
     return {
       id: p.product_id,
@@ -461,7 +486,8 @@ export default function Inventory() {
           {p.quantity}
         </span>
       ),
-      Status: statusBadge,
+      StockStatus: statusBadge,
+      ProductStatus: productStatusBadge,
       Actions: (
         <div className="flex gap-2">
           {!isArchived &&
@@ -474,20 +500,22 @@ export default function Inventory() {
                 <Edit size={16} />
               </button>
             )}
+          
           {isArchived && (user?.role === "Admin" || user?.role === "Staff") && (
             <button
               onClick={() => handleRestore(p)}
               className="p-1.5 text-slate-500 hover:text-emerald-600 bg-slate-100 hover:bg-emerald-50 rounded transition-colors"
-              title="Restore Product"
+              title="Reactivate Product"
             >
-              <RotateCcw size={16} />
+              <RefreshCw size={16} />
             </button>
           )}
+
           {user?.role === "Admin" && (
             <button
               onClick={() => handleDelete(p)}
               className="p-1.5 text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 rounded transition-colors"
-              title={isArchived ? "Permanently Delete" : "Delete or Archive"}
+              title={isArchived ? "Permanently Delete" : "Archive Product"}
             >
               <Trash2 size={16} />
             </button>
@@ -497,6 +525,7 @@ export default function Inventory() {
     };
   });
 
+  // 2. UPDATED FILTER CONFIG: Merged active/archived into stock level filter
   const filterConfig = [
     {
       id: "selectedCategory",
@@ -515,11 +544,12 @@ export default function Inventory() {
       value: selectedStockLevel,
       onChange: (e) => setSelectedStockLevel(e.target.value),
       options: [
-        { value: "all", label: "All Stock Levels" },
+        { value: "active", label: "All Active Products" },
         { value: "in-stock", label: "In Stock" },
         { value: "low-stock", label: "Low Stock" },
         { value: "critical", label: "Critical Stock" },
         { value: "out-of-stock", label: "Out of Stock" },
+        { value: "archived", label: "Archived Products" },
       ],
     },
   ];
@@ -573,12 +603,12 @@ export default function Inventory() {
           showClearButton={
             searchQuery ||
             selectedCategory !== "all" ||
-            selectedStockLevel !== "all"
+            selectedStockLevel !== "active"
           }
           onClear={() => {
             setSearchQuery("");
             setSelectedCategory("all");
-            setSelectedStockLevel("all");
+            setSelectedStockLevel("active");
           }}
           resultsCount={`Showing ${products.length} products`}
         />
