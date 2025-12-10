@@ -61,33 +61,33 @@ export default function Security() {
             </div>
 
             <div className="space-y-6">
-                {/* Session Timeout */}
-                <div className="grid grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Session Timeout (minutes)
-                        </label>
-                        <input
-                            type="number"
-                            value={sessionTimeout}
-                            onChange={(e) => setSessionTimeout(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
+    {/* Session Timeout */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+                Session Timeout (minutes)
+            </label>
+            <input
+                type="number"
+                value={sessionTimeout}
+                onChange={(e) => setSessionTimeout(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Max Login Attempts
-                        </label>
-                        <input
-                            type="number"
-                            value={maxLoginAttempts}
-                            onChange={(e) => setMaxLoginAttempts(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-                </div>
-            </div>
+        <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">
+                Max Login Attempts
+            </label>
+            <input
+                type="number"
+                value={maxLoginAttempts}
+                onChange={(e) => setMaxLoginAttempts(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
+    </div>
+</div>
 
             {/* Save Button with Loading State */}
             <div className="mt-6 flex flex-col gap-3">

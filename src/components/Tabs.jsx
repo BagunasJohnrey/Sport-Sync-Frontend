@@ -17,13 +17,14 @@ export default function Tabs({ tabs, initialTab }) {
   return (
     <div>
       {/* Tabs Header */}
-      <div className="relative flex justify-evenly bg-softWhite border border-gray-300 shadow-md rounded-xl gap-3 px-5 py-1 mb-6 border-b overflow-x-auto hide-scrollbar">
+      <div className="relative flex items-center justify-evenly bg-softWhite border border-gray-300 shadow-md rounded-xl gap-3 px-5 py-1 mb-6 border-b overflow-x-auto hide-scrollbar">
         {tabs.map((tab, index) => (
           <button
             key={tab.id}
             ref={(el) => (tabRefs.current[index] = el)}
             onClick={() => setActiveTab(tab.id)}
-            className="relative flex items-center gap-2 px-4 py-2 rounded-t-lg transition text-gray-600 hover:text-darkGreen"
+            // FIX: Added whitespace-nowrap and flex-shrink-0
+            className="relative flex items-center gap-2 px-4 py-2 rounded-t-lg transition text-gray-600 hover:text-darkGreen whitespace-nowrap flex-shrink-0"
           >
             {tab.icon && <tab.icon size={18} />}
             <span className="text-sm lg:text-md xl:text-lg">{tab.label}</span>
