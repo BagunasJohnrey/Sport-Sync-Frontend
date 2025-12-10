@@ -15,8 +15,6 @@ export default function CalendarFilter({ activeFilter = "Daily", activeDate = ne
 
   // Handle Filter Type Selection (Daily, Weekly, etc.)
   const handleFilterSelect = (filter) => {
-    // Determine the date to pass back. 
-    // If switching types, we usually want to keep the current reference date.
     if (onChange) onChange(filter, activeDate);
   };
 
@@ -69,7 +67,7 @@ export default function CalendarFilter({ activeFilter = "Daily", activeDate = ne
       <div className="relative">
         <button
           onClick={() => setIsPickerOpen(!isPickerOpen)}
-          className="flex items-center gap-3 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:border-navyBlue/30 transition-all shadow-sm min-w-[200px] justify-between"
+          className="flex items-center gap-3 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:border-navyBlue/30 transition-all shadow-sm min-w-[150px] text-sm justify-between"
         >
           <div className="flex items-center gap-2 text-slate-700 font-medium">
             <CalendarIcon size={18} className="text-navyBlue" />

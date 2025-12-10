@@ -50,13 +50,13 @@ export default function Navbar({ setOpenSidebar }) {
       </div>
 
       {/* Right side: notifications */}
-      <div className="flex items-center gap-4">
-        <Notification /> {/* Self-contained component */}
-        
+      <div className="flex items-center gap-4"> 
         {/* User Avatar */}
         <div className="w-8 h-8 rounded-full bg-navyBlue text-white flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-slate-100">
             {user?.full_name?.charAt(0) || 'U'}
         </div>
+
+        <Notification /> 
       </div>
     </header>
   );

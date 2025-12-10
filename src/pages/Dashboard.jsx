@@ -4,6 +4,7 @@ import KpiCard from "../components/KpiCard";
 import Chart from "../components/Chart";
 import { DollarSign, ShoppingCart, AlertTriangle, ArrowUp, AlertCircle, TrendingUp, Calendar, Loader2, Boxes } from "lucide-react";
 import API from '../services/api';
+import { format, eachDayOfInterval } from "date-fns"; // Added date-fns for gap filling
 
 // Helper function to process percentage change
 const percentChange = (current, previous) => {
@@ -17,7 +18,7 @@ export default function Dashboard() {
   
   const [dashboardData, setDashboardData] = useState(null);
   const [stockAlerts, setStockAlerts] = useState([]);
-  const [inventorySummary, setInventorySummary] = useState(null); // NEW: State for Inventory Summary
+  const [inventorySummary, setInventorySummary] = useState(null); 
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -43,7 +44,7 @@ export default function Dashboard() {
 
       // Set inventory data
       setStockAlerts(inventoryResponse.data.data.products_requiring_attention || []);
-      setInventorySummary(inventoryResponse.data.data.summary); // NEW: Capture summary
+      setInventorySummary(inventoryResponse.data.data.summary); 
       
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -67,33 +68,49 @@ export default function Dashboard() {
     );
   }
   
-  const { summary: todaySummary, sales_by_category, payment_methods, top_products } = dashboardData.today;
+  const { summary: todaySummary, sales_by_category, top_products } = dashboardData.today;
   const { sales_trend } = dashboardData.trend;
 
   // SALES KPIs
   const totalRevenue = parseFloat(todaySummary?.total_revenue || 0);
   const totalTransactions = parseInt(todaySummary?.total_transactions || 0);
-  const avgTransaction = parseFloat(todaySummary?.average_transaction_value || 0);
-  const topPaymentMethod = todaySummary?.top_payment_method === 'Mobile' ? 'GCash' : (todaySummary?.top_payment_method || 'N/A');
   
-  // INVENTORY KPIs (Fetched dynamically now)
+  // INVENTORY KPIs 
   const lowStock = parseInt(inventorySummary?.low_stock_count || 0);
   const outOfStock = parseInt(inventorySummary?.out_of_stock_count || 0);
 
   // TREND Calculation
-  const trendRevenue = (sales_trend || []).map(d => parseFloat(d.total_revenue));
-  const yesterdayRevenue = trendRevenue[trendRevenue.length - 2] || 0;
+  // We use the raw sales_trend here for quick yesterday comparison before gap filling
+  const rawTrendRevenue = (sales_trend || []).map(d => parseFloat(d.total_revenue));
+  const yesterdayRevenue = rawTrendRevenue[rawTrendRevenue.length - 2] || 0;
   const revenueChange = yesterdayRevenue > 0 
     ? (((totalRevenue - yesterdayRevenue) / yesterdayRevenue) * 100).toFixed(1) 
     : 0;
   const isPositiveChange = revenueChange >= 0;
 
-  // Charts Data Preparation
-  const trendLabels = (sales_trend || []).map(d => {
-    const date = new Date(d.date_label);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  });
-  const trendVolume = (sales_trend || []).map(d => parseInt(d.total_sales_count));
+  // --- DATA GAP FILLING FOR CHARTS ---
+  const filledTrend = (() => {
+      // Re-create the date interval used in fetchData (7 days ago to today)
+      const end = new Date();
+      const start = new Date();
+      start.setDate(end.getDate() - 7); 
+
+      const allDays = eachDayOfInterval({ start, end });
+      
+      return allDays.map(day => {
+          const dateKey = format(day, 'yyyy-MM-dd');
+          const found = (sales_trend || []).find(d => d.date_label === dateKey);
+          return {
+              label: format(day, 'MMM dd'), // Formatted for Tooltip/Axis
+              revenue: found ? parseFloat(found.total_revenue) : 0,
+              volume: found ? parseInt(found.total_sales_count) : 0
+          };
+      });
+  })();
+
+  const trendLabels = filledTrend.map(d => d.label);
+  const trendRevenue = filledTrend.map(d => d.revenue);
+  const trendVolume = filledTrend.map(d => d.volume);
   
   const categoryNames = (sales_by_category || []).map(c => c.category_name);
   const categoryRevenue = (sales_by_category || []).map(c => parseFloat(c.total_revenue));
