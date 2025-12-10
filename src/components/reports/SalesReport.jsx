@@ -20,6 +20,7 @@ import {
   startOfYear,
   endOfYear,
   format,
+  eachDayOfInterval, // Added for gap filling
 } from "date-fns";
 import CalendarFilter from "../../components/CalendarFilter";
 import API from "../../services/api";
@@ -189,13 +190,37 @@ export default function SalesReport() {
   const prevRevenue = currentRevenue / 1.1; // Placeholder logic from your code
   const saleChange = ((currentRevenue - prevRevenue) / prevRevenue) * 100;
 
-  const trendLabels = (sales_trend || []).map((d) => d.date_label);
-  const trendRevenue = (sales_trend || []).map((d) =>
-    parseFloat(d.total_revenue)
-  );
-  const trendVolume = (sales_trend || []).map((d) =>
-    parseInt(d.total_sales_count)
-  );
+  // --- DATA FILLING LOGIC ---
+  // Fill missing dates with 0 values to ensure continuous chart line
+  const filledSalesTrend = (() => {
+    if (!sales_trend) return [];
+    
+    // Parse dates (ensure robustness)
+    const start = new Date(reportData.start_date);
+    const end = new Date(reportData.end_date);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return sales_trend;
+
+    // Generate all dates in the range
+    const allDays = eachDayOfInterval({ start, end });
+
+    return allDays.map((day) => {
+      const dateKey = format(day, 'yyyy-MM-dd');
+      // Find existing record or return null
+      const found = sales_trend.find(item => item.date_label === dateKey);
+
+      return {
+        // Use a formatted date for the display label (Tooltip/Axis)
+        date_label: format(day, 'MMM dd'), 
+        total_revenue: found ? parseFloat(found.total_revenue) : 0,
+        total_sales_count: found ? parseInt(found.total_sales_count) : 0
+      };
+    });
+  })();
+
+  const trendLabels = filledSalesTrend.map((d) => d.date_label);
+  const trendRevenue = filledSalesTrend.map((d) => d.total_revenue);
+  const trendVolume = filledSalesTrend.map((d) => d.total_sales_count);
 
   const categoryNames = (sales_by_category || []).map((c) => c.category_name);
   const categoryRevenue = (sales_by_category || []).map((c) =>

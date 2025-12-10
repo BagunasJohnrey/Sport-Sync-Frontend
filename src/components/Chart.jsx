@@ -69,8 +69,8 @@ export default function Chart({
   }, [series, categories, type]);
 
 
-  // --- Chart Configuration ---
-  const chartOptions = useMemo(() => {
+    // --- Chart Configuration ---
+    const chartOptions = useMemo(() => {
     const isCircular = type === "donut" || type === "pie";
     
     // Detect if this is a volume chart (not currency)
@@ -133,7 +133,7 @@ export default function Chart({
         labels: {
           style: { colors: "#64748B", fontSize: "12px", fontWeight: 500 },
           formatter: (value) => {
-             const prefix = isVolumeChart ? "" : "₱"; // No currency symbol for volume
+             const prefix = isVolumeChart ? "" : "₱"; 
              if (value >= 1000000) return `${prefix}${(value / 1000000).toFixed(1)}M`;
              if (value >= 1000) return `${prefix}${(value / 1000).toFixed(0)}k`;
              return `${prefix}${value}`;
@@ -155,10 +155,7 @@ export default function Chart({
             const label = w.globals.labels[seriesIndex]; 
             const total = w.globals.seriesTotals.reduce((a, b) => a + b, 0);
             const percent = total > 0 ? ((value / total) * 100).toFixed(1) : 0.0;
-            
-            // Assume payment distribution is counts (volume), unless context implies otherwise
-            // But standard donut is usually counts. If revenue share, add ₱.
-            // For now, sticking to generic number for safety on generic donuts.
+
             const formattedValue = value?.toLocaleString(); 
 
             return `
@@ -175,7 +172,8 @@ export default function Chart({
           }
 
           // Handle Bar/Line/Area
-          const category = w.globals.labels[dataPointIndex];
+          const category = validCategories[dataPointIndex]; 
+          
           let html = `
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); min-width: 150px; overflow: hidden;">
               <div style="background: #f8fafc; padding: 8px 12px; border-bottom: 1px solid #e2e8f0;">
@@ -221,7 +219,7 @@ export default function Chart({
                   fontWeight: 700, 
                   color: "#002B50", 
                   offsetY: 6, 
-                  formatter: (val) => parseInt(val).toLocaleString() // Generic formatter
+                  formatter: (val) => parseInt(val).toLocaleString() 
               },
               total: { 
                   show: true, 
@@ -238,7 +236,7 @@ export default function Chart({
       dataLabels: { enabled: false },
       legend: { show: true, position: "bottom", horizontalAlign: "left", fontSize: "13px", fontWeight: 500, markers: { radius: 12, width: 12, height: 12 }, itemMargin: { horizontal: 15, vertical: 5 } }
     };
-  }, [type, validSeries, validCategories, brandPalette]); // Added validSeries to dependency
+  }, [type, validSeries, validCategories, brandPalette]);
 
   const containerClasses = `
     w-full bg-white rounded-xl p-6 
