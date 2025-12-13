@@ -277,7 +277,7 @@ export default function SalesReport() {
   return (
     <div className="flex flex-col space-y-6" ref={reportRef}>
       <div className="flex flex-row gap-1 sm:gap-3 justify-between items-center">
-        <div className="flex gap-3">
+        <div>
           <button
             onClick={fetchData}
             disabled={loading}
@@ -290,32 +290,23 @@ export default function SalesReport() {
             )}
             <span className="hidden sm:inline">Refresh</span>
           </button>
-
-          <div>
-            <ExportButton
-              data={exportData}
-              columns={displayColumns}
-              fileName={fileName}
-              title={`Sales Report - ${dateRange.start} to ${dateRange.end}`}
-              domElementRef={reportRef}
-            />
-          </div>
         </div>
-        
-            <ExportButton
-              data={exportData}
-              columns={displayColumns}
-              fileName={fileName}
-              title={`Sales Report - ${dateRange.start} to ${dateRange.end}`}
-              domElementRef={reportRef}
-            />
 
+        <div className="flex gap-3">
+          <ExportButton
+            data={exportData}
+            columns={displayColumns}
+            fileName={fileName}
+            title={`Sales Report - ${dateRange.start} to ${dateRange.end}`}
+            domElementRef={reportRef}
+          />
 
-        <CalendarFilter
-          activeFilter={activeFilter}
-          activeDate={activeDate}
-          onChange={handleFilterChange}
-        />
+          <CalendarFilter
+            activeFilter={activeFilter}
+            activeDate={activeDate}
+            onChange={handleFilterChange}
+          />
+        </div>
       </div>
 
       {/* KPI Cards */}

@@ -216,29 +216,26 @@ export default function Profitability() {
     <div className="flex flex-col space-y-5">
       {/* Header / Controls */}
       <div className="flex flex-row gap-3 justify-between items-center">
+        <button
+          onClick={fetchData}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:text-navyBlue hover:border-navyBlue/30 rounded-lg transition-all shadow-sm"
+        >
+          {loading ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <RefreshCw size={16} />
+          )}
+          <span className="hidden sm:inline">Refresh</span>
+        </button>
         <div className="flex gap-3">
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:text-navyBlue hover:border-navyBlue/30 rounded-lg transition-all shadow-sm"
-          >
-            {loading ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <RefreshCw size={16} />
-            )}
-            <span className="hidden sm:inline">Refresh</span>
-          </button>
-
           <ExportButton
             data={exportData}
             columns={columns}
             fileName={`Balayan Smasher's Hub_Profitability_Report_${dateRange.start}_to_${dateRange.end}`}
             title={`Product Profitability - ${dateRange.start} to ${dateRange.end}`}
           />
-        </div>
 
-        <div>
           <CalendarFilter
             activeFilter={activeFilter}
             activeDate={activeDate}
