@@ -34,15 +34,24 @@ API.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        const isAuthError = error.response?.status === 401;
-        const isRefreshAttempt = originalRequest.url.includes('/auth/refresh');
+        
+        // Safety check: ensure response exists before checking status
+        if (!error.response) {
+            return Promise.reject(error);
+        }
 
-        // Check if 401 is due to expired token and it's not already a refresh retry
-        if (isAuthError && !isRefreshAttempt && !originalRequest._retry) {
+        const isAuthError = error.response.status === 401;
+        const isRefreshAttempt = originalRequest.url.includes('/auth/refresh');
+        
+        // --- FIX: Check if the error came from the login endpoint ---
+        const isLoginAttempt = originalRequest.url.includes('/login'); 
+
+        // Check if 401 is due to expired token AND it's not a login attempt
+        if (isAuthError && !isRefreshAttempt && !isLoginAttempt && !originalRequest._retry) {
             originalRequest._retry = true;
             
             try {
-                // Call the dedicated refresh endpoint, relying on the refresh_token cookie
+                // Call the dedicated refresh endpoint
                 const { data } = await axios.get(`${API_BASE_URL}/auth/refresh`, { withCredentials: true });
                 
                 // Save new Access Token
@@ -53,16 +62,22 @@ API.interceptors.response.use(
                 return API(originalRequest);
 
             } catch (refreshError) {
-                // Refresh failed (cookie invalid/expired) - force client-side logout
+                // Refresh failed - force client-side logout
                 console.error("Token refresh failed, forcing logout:", refreshError);
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('user');
                 localStorage.removeItem('role');
-                window.location.href = '/login'; 
+                
+                // Only redirect if we aren't already on the login page
+                if (!window.location.pathname.includes('/login')) {
+                    window.location.href = '/login'; 
+                }
+                
                 return Promise.reject(refreshError);
             }
         }
         
+        // If it was a login error, this line passes it back to your Login.jsx component
         return Promise.reject(error);
     }
 );

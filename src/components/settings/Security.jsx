@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Shield, Save, Loader2, CheckCircle2 } from 'lucide-react'; 
+import { Shield, Save, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'; 
 import API from '../../services/api';
 
 export default function Security() {
-    const [sessionTimeout, setSessionTimeout] = useState('');
+    // Repurposed state variable: previously sessionTimeout
+    const [lockoutDuration, setLockoutDuration] = useState('');
     const [maxLoginAttempts, setMaxLoginAttempts] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -15,12 +16,13 @@ export default function Security() {
             try {
                 const res = await API.get('/settings'); 
                 if (res.data && res.data.data) {
-                    setSessionTimeout(res.data.data.session_timeout || '30');
+                    // Map 'session_timeout' from DB to lockoutDuration state
+                    setLockoutDuration(res.data.data.session_timeout || '15');
                     setMaxLoginAttempts(res.data.data.max_login_attempts || '5');
                 }
             } catch (error) {
                 console.error("Failed to load settings, using defaults.", error);
-                setSessionTimeout('30');
+                setLockoutDuration('15');
                 setMaxLoginAttempts('5');
             } finally {
                 setLoading(false);
@@ -30,21 +32,31 @@ export default function Security() {
     }, []);
 
     const handleSave = async () => {
+        // Validation
+        if (parseInt(lockoutDuration) < 5) {
+            setSaveMessage({ type: 'error', text: "Lockout duration must be at least 5 minutes." });
+            return;
+        }
+        if (parseInt(maxLoginAttempts) < 3) {
+            setSaveMessage({ type: 'error', text: "Max login attempts must be at least 3." });
+            return;
+        }
+
         setIsSaving(true);
         setSaveMessage(null);
 
         try {
             // 2. Send updates to backend
+            // Map lockoutDuration state back to 'session_timeout' key for DB compatibility
             await API.put('/settings', {
-                session_timeout: sessionTimeout,
+                session_timeout: lockoutDuration,
                 max_login_attempts: maxLoginAttempts
             });
-            setSaveMessage("Security settings saved successfully!");
+            setSaveMessage({ type: 'success', text: "Security settings saved successfully!" });
             setTimeout(() => setSaveMessage(null), 3000);
         } catch (error) {
             console.error("Failed to save settings:", error);
-            // Fallback for demo if backend route missing
-            setSaveMessage("Settings saved locally (Backend sync failed)"); 
+            setSaveMessage({ type: 'error', text: "Failed to save settings. Please try again." }); 
             setTimeout(() => setSaveMessage(null), 3000);
         } finally {
             setIsSaving(false);
@@ -61,33 +73,39 @@ export default function Security() {
             </div>
 
             <div className="space-y-6">
-    {/* Session Timeout */}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-                Session Timeout (minutes)
-            </label>
-            <input
-                type="number"
-                value={sessionTimeout}
-                onChange={(e) => setSessionTimeout(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Repurposed Field */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Account Lockout Duration (minutes)
+                        </label>
+                        <input
+                            type="number"
+                            min="5"
+                            value={lockoutDuration}
+                            onChange={(e) => setLockoutDuration(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            Time an account remains locked after exceeding max attempts.
+                        </p>
+                    </div>
 
-        <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">
-                Max Login Attempts
-            </label>
-            <input
-                type="number"
-                value={maxLoginAttempts}
-                onChange={(e) => setMaxLoginAttempts(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-        </div>
-    </div>
-</div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Max Login Attempts
+                        </label>
+                        <input
+                            type="number"
+                            min="3"
+                            value={maxLoginAttempts}
+                            onChange={(e) => setMaxLoginAttempts(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Account locks automatically after consecutive failures.</p>
+                    </div>
+                </div>
+            </div>
 
             {/* Save Button with Loading State */}
             <div className="mt-6 flex flex-col gap-3">
@@ -116,9 +134,11 @@ export default function Security() {
                 </button>
 
                 {saveMessage && (
-                    <div className="flex items-center justify-center gap-2 text-green-600 bg-green-50 p-2 rounded-md text-sm font-medium animate-fade-in">
-                        <CheckCircle2 className="w-4 h-4" />
-                        {saveMessage}
+                    <div className={`flex items-center justify-center gap-2 p-2 rounded-md text-sm font-medium animate-fade-in ${
+                        saveMessage.type === 'success' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'
+                    }`}>
+                        {saveMessage.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                        {saveMessage.text}
                     </div>
                 )}
             </div>

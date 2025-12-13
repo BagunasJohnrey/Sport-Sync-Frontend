@@ -181,13 +181,7 @@ export default function AutomatedReports() {
         </div>
       </div>
 
-      <div className="flex justify-between gap-3">
-        <ExportButton
-          data={exportData}
-          columns={columns}
-          fileName={`Report_History_${dateRange.start}_${dateRange.end}`}
-          title="Report History Log"
-        />
+      <div className="flex justify-end">
         <CalendarFilter onChange={handleDateFilterChange} />
       </div>
 
