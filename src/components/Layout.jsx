@@ -1,13 +1,33 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import LogoutModal from './LogoutModal'; // Imported new component
+import { useAuth } from "../context/AuthContext";
+import API from "../services/api";
 
 export default function Layout({ children }) {
   const [openSidebar, setOpenSidebar] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(window.innerWidth >= 1024 ? true : false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleSidebarToggle = (collapsed) => {
     setIsSidebarCollapsed(collapsed);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      await API.get('/auth/logout'); 
+    } catch (error) {
+      console.error("Logout failed on server:", error);
+    } finally {
+      logout();
+      navigate("/login");
+      setShowLogoutModal(false);
+    }
   };
 
   return (
@@ -19,7 +39,10 @@ export default function Layout({ children }) {
           ${isSidebarCollapsed ? "w-20" : "w-64"}
         `}
       >
-        <Sidebar onToggle={handleSidebarToggle} />
+        <Sidebar 
+            onToggle={handleSidebarToggle} 
+            onLogoutRequest={() => setShowLogoutModal(true)} 
+        />
       </div>
 
       {/* Mobile Overlay + Drawer */}
@@ -40,7 +63,13 @@ export default function Layout({ children }) {
             ${openSidebar ? "translate-x-0" : "-translate-x-full"}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <Sidebar onToggle={setIsSidebarCollapsed} />
+          <Sidebar 
+            onToggle={setIsSidebarCollapsed} 
+            onLogoutRequest={() => {
+                setOpenSidebar(false); // Close mobile sidebar first
+                setShowLogoutModal(true);
+            }} 
+          />
         </div>
       </div>
 
@@ -50,6 +79,13 @@ export default function Layout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Logout Modal Component */}
+      <LogoutModal 
+        isOpen={showLogoutModal} 
+        onClose={() => setShowLogoutModal(false)} 
+        onConfirm={handleConfirmLogout} 
+      />
 
     </div>
   );

@@ -228,7 +228,7 @@ export default function Profitability() {
           )}
           <span className="hidden sm:inline">Refresh</span>
         </button>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <ExportButton
             data={exportData}
             columns={columns}

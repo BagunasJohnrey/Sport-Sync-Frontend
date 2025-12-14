@@ -136,9 +136,14 @@ export default function Users() {
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div><h1 className="page-title">User Management</h1><p className="page-description">Control access and manage user accounts.</p></div>
-          <AddUser onUserAdded={fetchData} setToast={setToast}/>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="page-title">User Management</h1>
+            <p className="page-description">Control access and manage user accounts.</p>
+          </div>
+          <div className="flex justify-end w-full sm:w-auto">
+            <AddUser onUserAdded={fetchData} setToast={setToast}/>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

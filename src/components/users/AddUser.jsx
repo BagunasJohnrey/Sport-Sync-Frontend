@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, X, Users, Loader2 } from 'lucide-react';
+import { Plus, X, Users, Loader2, Eye, EyeOff } from 'lucide-react';
 import API from '../../services/api';
 
 export default function UserManagementHeader({ onUserAdded, setToast }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -39,6 +40,7 @@ export default function UserManagementHeader({ onUserAdded, setToast }) {
         onUserAdded(); // Callback to refresh the user list in parent
         setIsModalOpen(false);
         setFormData({ fullName: '', email: '', username: '', password: '', role: 'Cashier' });
+        setShowPassword(false); // Reset password visibility
     } catch (error) {
         const msg = error.response?.data?.message || error.response?.data?.errors?.[0]?.msg || 'Failed to create user.';
         setToast({ message: msg, type: "error" });
@@ -79,7 +81,7 @@ export default function UserManagementHeader({ onUserAdded, setToast }) {
               </button>
             </div>
 
-            {/* Modal Body - Added autoComplete="off" to form */}
+            {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 space-y-5" autoComplete="off">
               {/* Full Name */}
               <div>
@@ -121,7 +123,7 @@ export default function UserManagementHeader({ onUserAdded, setToast }) {
                   Username <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="text" // Changed from 'username' to 'text' as 'username' is not a valid HTML5 type
+                  type="text"
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
@@ -132,25 +134,31 @@ export default function UserManagementHeader({ onUserAdded, setToast }) {
                 />
               </div>
 
-                {/* Password - Added autoComplete="new-password" */}
+              {/* Password */}
               <div>
                 <label className="block text-sm font-semibold text-slate-800 mb-2">
                   Password <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder="Enter password"
-                  required
-                  autoComplete="new-password"
-                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all bg-slate-50"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Enter password"
+                    required
+                    autoComplete="new-password"
+                    className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-blue-900 transition-all bg-slate-50 pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-900 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
-
-
-              
 
               {/* Role */}
               <div>
@@ -172,7 +180,7 @@ export default function UserManagementHeader({ onUserAdded, setToast }) {
                 </div>
               </div>
 
-              {/* Active User Toggle (NOTE: Status must be Active/Inactive string in the backend) */}
+              {/* Active User Toggle */}
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -189,8 +197,6 @@ export default function UserManagementHeader({ onUserAdded, setToast }) {
                 </button>
                 <span className="text-sm font-semibold text-slate-800">Active User</span>
               </div>
-
-              
 
               {/* Submit Button */}
               <button
