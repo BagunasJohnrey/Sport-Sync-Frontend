@@ -3,39 +3,25 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logo from "../assets/logo.png";
 import {
-  Home, ShoppingCart, Archive, BarChart2, Users, Settings, LogOut, ChevronLeft, ChevronRight, AlertCircle
+  Home, ShoppingCart, Archive, BarChart2, Users, Settings, LogOut, ChevronLeft, ChevronRight
 } from "lucide-react";
-import API from "../services/api";
 
-export default function Sidebar({ onToggle }) {
+export default function Sidebar({ onToggle, onLogoutRequest }) {
   const isFirstRender = useRef(true);
   const [isCollapsed, setIsCollapsed] = useState(window.innerWidth >= 1024 ? true : false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false); // New state for modal
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation(); 
   
 
   const menuItems = [
     { title: "Dashboard", path: "/dashboard", roles: ["Admin","Staff","Cashier"], icon: <Home size={20} /> },
-    { title: "Point of Sale", path: "/point-of-sale", roles: ["Admin","Cashier"], icon: <ShoppingCart size={20} /> },
+    { title: "Point of Sale", path: "/point-of-sale", roles: ["Admin","Staff","Cashier"], icon: <ShoppingCart size={20} /> },
     { title: "Inventory", path: "/inventory", roles: ["Admin","Staff","Cashier"], icon: <Archive size={20} /> },
     { title: "Reports", path: "/reports", roles: ["Admin"], icon: <BarChart2 size={20} /> },
     { title: "Users", path: "/users", roles: ["Admin"], icon: <Users size={20} /> },
     { title: "Settings", path: "/settings", roles: ["Admin"], icon: <Settings size={20} /> },
   ];
-
-  const handleLogout = async () => {
-    try {
-      await API.get('/auth/logout'); 
-    } catch (error) {
-      console.error("Logout failed on server:", error);
-    } finally {
-      logout();
-      navigate("/login");
-      setShowLogoutModal(false); // Close modal after logout
-    }
-  };
 
   const toggleSidebar = () => {
     setIsCollapsed(prev => !prev);
@@ -113,7 +99,7 @@ export default function Sidebar({ onToggle }) {
             )}
 
           <button 
-            onClick={() => setShowLogoutModal(true)} 
+            onClick={onLogoutRequest} 
             className={`flex items-center gap-3 w-full p-3 rounded-xl transition-all duration-200 font-medium justify-start lg:${isCollapsed ? "justify-center" : "justify-start"} hover:bg-darkGreen `}
           >
             <LogOut size={20} stroke="currentColor" className="shrink-0" />
@@ -125,37 +111,6 @@ export default function Sidebar({ onToggle }) {
 
       {/* Overlay for mobile */}
       {!isCollapsed && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setIsCollapsed(true)} />}
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 text-center">
-              <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <AlertCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm Logout</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Are you sure you want to log out of your account?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowLogoutModal(false)}
-                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="flex-1 px-4 py-2.5 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
-                >
-                  Log Out
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
