@@ -18,7 +18,7 @@ export default function Sidebar({ onToggle }) {
 
   const menuItems = [
     { title: "Dashboard", path: "/dashboard", roles: ["Admin","Staff","Cashier"], icon: <Home size={20} /> },
-    { title: "Point of Sale", path: "/point-of-sale", roles: ["Admin","Staff","Cashier"], icon: <ShoppingCart size={20} /> },
+    { title: "Point of Sale", path: "/point-of-sale", roles: ["Admin","Cashier"], icon: <ShoppingCart size={20} /> },
     { title: "Inventory", path: "/inventory", roles: ["Admin","Staff","Cashier"], icon: <Archive size={20} /> },
     { title: "Reports", path: "/reports", roles: ["Admin"], icon: <BarChart2 size={20} /> },
     { title: "Users", path: "/users", roles: ["Admin"], icon: <Users size={20} /> },
