@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, Trash2, X, CheckCircle, Loader2 } from 'lucide-react';
 import API from '../services/api';
+import {useAuth} from '../context/AuthContext';
 
 export default function Notification() {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   
   // Refs for positioning
   const buttonRef = useRef(null);
@@ -20,7 +22,7 @@ export default function Notification() {
       const allData = response.data.data || [];
 
       // --- LOGIC: Filter out "Cleared" notifications ---
-      const lastCleared = localStorage.getItem('notification_cleared_timestamp');
+      const lastCleared = localStorage.getItem('notification_cleared_${user?.user_id}');
       
       const visibleNotifications = lastCleared 
         ? allData.filter(n => new Date(n.created_at) > new Date(lastCleared))
@@ -101,7 +103,10 @@ export default function Notification() {
 
   // --- UPDATED: Clear Display  ---
   const clearAllNotifications = () => {
-    localStorage.setItem('notification_cleared_timestamp', new Date().toISOString());
+    if (!user) return;
+    const storageKey = `notification_cleared_${user.user_id}`;
+
+    localStorage.setItem(storageKey, new Date().toISOString());
     
     // Clear local state immediately
     setNotifications([]);

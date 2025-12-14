@@ -95,16 +95,16 @@ export default function Table({ tableName, columns = [], data = [], rowsPerPage 
             </button>
 
             <div className="flex items-center gap-2 mx-2">
-              <span className="text-sm text-slate-600">Page</span>
+              <span className="text-xs text-slate-600">Page</span>
               <input
                 type="number"
                 min={1}
                 max={totalPages}
                 value={currentPage}
                 onChange={handlePageInput}
-                className="w-12 h-8 text-center text-sm border border-slate-300 rounded-md focus:ring-2 focus:ring-navyBlue/20 focus:border-navyBlue transition-all outline-none"
+                className="w-12 h-8 text-center text-xs border border-slate-300 rounded-md focus:ring-2 focus:ring-navyBlue/20 focus:border-navyBlue transition-all outline-none"
               />
-              <span className="text-sm text-slate-600">of {totalPages}</span>
+              <span className="text-xs text-slate-600">of {totalPages}</span>
             </div>
 
             <button onClick={goNext} disabled={currentPage === totalPages} className="p-2 rounded-lg text-slate-500 hover:bg-white hover:text-navyBlue hover:shadow-sm disabled:opacity-30 transition-all">
